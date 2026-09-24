@@ -321,7 +321,7 @@ describe('overview', () => {
     const kode = alert.map((a: any) => a.kode)
     expect(kode).toContain('JABATAN_BELUM_DIMAPPING')
     expect(kode).toContain('UKURAN_KOSONG')
-    expect(kode).toContain('STOK_KURANG')
+    expect(kode).toContain('SKU_KRITIS') // M3: menggantikan STOK_KURANG
     expect(kode).toContain('STOK_AWAL_BELUM')
     const kpi = (await select(db, 'admin', 'v_kpi_current'))[0]
     expect(kpi.karyawan_aktif).toBe(2)

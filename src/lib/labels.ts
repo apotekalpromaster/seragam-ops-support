@@ -61,10 +61,13 @@ export const ENTITAS_LABEL: Record<string, string> = {
   config: 'Parameter', item: 'Item', item_size: 'Ukuran item', sku: 'SKU', sku_price: 'Harga SKU', vendor: 'Vendor',
   package: 'Paket', package_version: 'Versi paket', package_item: 'Isi paket', position_map: 'Mapping jabatan',
   employee_package_override: 'Override karyawan', branch: 'Cabang', size_curve: 'Size curve', size_chart: 'Size chart',
-  app_user: 'Pengguna', stock_opname: 'Stock opname', employee: 'Karyawan',
+  app_user: 'Pengguna', stock_opname: 'Stock opname', employee: 'Karyawan', purchase_order: 'Purchase order',
 }
 
-export const AKSI_LABEL: Record<string, string> = { INSERT: 'Tambah', UPDATE: 'Ubah', DELETE: 'Hapus', UBAH_UKURAN: 'Ubah ukuran' }
+export const AKSI_LABEL: Record<string, string> = {
+  INSERT: 'Tambah', UPDATE: 'Ubah', DELETE: 'Hapus', UBAH_UKURAN: 'Ubah ukuran',
+  PO_BUAT: 'Buat PO', PO_UBAH: 'Ubah PO', PO_KIRIM: 'Kirim PO ke vendor', PO_DRAFT: 'PO kembali ke draft', PO_BATAL: 'Batalkan PO', PO_TUTUP: 'Tutup PO', PO_TERIMA: 'Terima barang PO',
+}
 
 export const OPNAME_STATUS_LABEL: Record<string, string> = {
   DRAFT: 'Draft', SUBMITTED: 'Menunggu approval', APPROVED: 'Disetujui', DIBATALKAN: 'Dibatalkan',
@@ -79,4 +82,16 @@ export const CAKUPAN_LABEL: Record<string, string> = {
 }
 export const PENYERAHAN_LABEL: Record<string, string> = {
   DISIAPKAN: 'Disiapkan di gudang', DIKIRIM: 'Dalam pengiriman', DITAHAN_APA: 'Ditahan APA (belum join)', DITERIMA: 'Diterima cabang', DIBATALKAN: 'Batch dibatalkan',
+}
+
+export const PLAN_STATUS_LABEL: Record<string, string> = { KRITIS: 'Kritis', ORDER: 'Perlu order', AMAN: 'Aman' }
+export const PLAN_STATUS_TONE: Record<string, 'red' | 'amber' | 'green'> = { KRITIS: 'red', ORDER: 'amber', AMAN: 'green' }
+export const DEMAND_SUMBER_LABEL: Record<string, string> = {
+  HISTORI: 'Dari histori keluar', SIZE_CURVE: 'Perkiraan (rencana hire × size curve)', TIDAK_ADA: 'Belum ada permintaan',
+}
+export const PO_STATUS_LABEL: Record<string, string> = {
+  DRAFT: 'Draft', SENT: 'Dikirim ke vendor', PARTIAL: 'Diterima sebagian', RECEIVED: 'Diterima lengkap', CANCELLED: 'Dibatalkan',
+}
+export const PO_STATUS_TONE: Record<string, 'slate' | 'blue' | 'amber' | 'green'> = {
+  DRAFT: 'slate', SENT: 'blue', PARTIAL: 'amber', RECEIVED: 'green', CANCELLED: 'slate',
 }

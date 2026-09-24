@@ -64,10 +64,12 @@ export function Drawer({ open, onOpenChange, title, subtitle, children, footer }
  * Konfirmasi aksi berisiko (heuristik #5). Menampilkan ringkasan dampak; untuk
  * aksi yang tidak bisa dibatalkan, pengguna mengetik kata konfirmasi.
  */
-export function ConfirmDialog({ open, onOpenChange, title, children, confirmLabel, onConfirm, loading, danger, irreversible, typeToConfirm }: {
+export function ConfirmDialog({ open, onOpenChange, title, children, confirmLabel, onConfirm, loading, danger, irreversible, typeToConfirm, disabled }: {
   open: boolean; onOpenChange: (o: boolean) => void; title: ReactNode; children?: ReactNode
   confirmLabel: string; onConfirm: () => void; loading?: boolean; danger?: boolean
   irreversible?: boolean; typeToConfirm?: string
+  /** Nonaktifkan tombol konfirmasi (mis. alasan wajib belum diisi). */
+  disabled?: boolean
 }) {
   const [typed, setTyped] = useState('')
   const ok = !typeToConfirm || typed.trim().toUpperCase() === typeToConfirm.toUpperCase()
@@ -80,7 +82,7 @@ export function ConfirmDialog({ open, onOpenChange, title, children, confirmLabe
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={loading}>Batal</Button>
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading} disabled={!ok}>{confirmLabel}</Button>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading} disabled={!ok || disabled}>{confirmLabel}</Button>
         </>
       }
     >

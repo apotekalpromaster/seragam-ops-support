@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import {
   BookOpen, Boxes, CalendarDays, ClipboardCheck, Clock, Database, FileClock, FileUp, Home, LogOut, Menu, Package,
-  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck,
+  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck, ShoppingCart,
 } from 'lucide-react'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -33,6 +33,7 @@ function useNav(): { group: string; items: NavItem[] }[] {
         { to: '/batch', label: 'Batch Distribusi', icon: <Truck />, badge: lateBatch || batches?.length || undefined, badgeTone: lateBatch ? 'red' : 'brand' },
         { to: '/karyawan', label: 'Karyawan', icon: <Users /> },
         { to: '/stok', label: 'Stok', icon: <Boxes /> },
+        { to: '/pengadaan', label: 'Pengadaan', icon: <ShoppingCart />, badge: a('SKU_KRITIS') || a('SKU_ORDER') || undefined, badgeTone: a('SKU_KRITIS') ? 'red' : 'amber' },
         { to: '/opname', label: 'Stock Opname', icon: <ClipboardCheck />, badge: opname?.length || undefined, badgeTone: 'brand' },
       ],
     },
@@ -206,7 +207,7 @@ export function Page({ title, subtitle, actions, help, children, wide }: {
     <>
       <header className="no-print sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur sm:px-8 sm:py-4">
         <button className="rounded-xl border border-line p-2 text-slate-600 lg:hidden" onClick={openMenu} aria-label="Buka menu"><Menu className="size-5" /></button>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[14rem] flex-1">
           <h1 className="flex items-center gap-2 truncate text-xl font-extrabold text-ink sm:text-[22px]">
             {title}
             {help && (
@@ -219,7 +220,7 @@ export function Page({ title, subtitle, actions, help, children, wide }: {
             Apotek Alpro <span className="mx-1">•</span> {subtitle ?? <span className="font-semibold text-emerald-600">Sistem Aktif</span>}
           </p>
         </div>
-        <div className="hidden items-center gap-3 rounded-xl border border-line px-3.5 py-2 text-sm md:flex">
+        <div className="hidden items-center gap-3 rounded-xl border border-line px-3.5 py-2 text-sm xl:flex">
           <span className="flex items-center gap-1.5 text-slate-600"><CalendarDays className="size-4" /> {fmtDateLong(new Date()).replace(/^(\w+), (\d+) (\w{3})\w* /, '$1, $2 $3 ')}</span>
           <span className="h-4 w-px bg-line" />
           <span className="flex items-center gap-1.5 font-semibold text-brand-600"><Clock className="size-4" /><Clock24 /></span>

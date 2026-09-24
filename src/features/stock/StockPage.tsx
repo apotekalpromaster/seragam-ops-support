@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import clsx from 'clsx'
-import { ClipboardCheck, RotateCcw } from 'lucide-react'
+import { ClipboardCheck, RotateCcw, ShoppingCart } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Page } from '../../components/AppShell'
@@ -10,13 +10,13 @@ import { Button, Callout, Card, Chip, Field, Select, Tabs, Term, Textarea } from
 import { useRpc, useView } from '../../lib/api'
 import { usePerm } from '../../lib/auth'
 import { fmtDate, fmtDateTime, fmtNum } from '../../lib/format'
-import { GENDER_LABEL, STOCK_STATUS_LABEL, TX_LABEL } from '../../lib/labels'
+import { GENDER_LABEL, PLAN_STATUS_LABEL, PLAN_STATUS_TONE, STOCK_STATUS_LABEL, TX_LABEL } from '../../lib/labels'
 
 interface StockRow {
   sku_code: string; item_code: string; item_nama: string; gender: string; size_code: string; size_order: number; label: string
   item_sort: number; price: number | null; active: boolean; layak: number; karantina: number; cadangan: number; afkir: number; reserved: number; available: number
+  on_order: number; pipeline_demand: number; suggested_order: number; status: string
 }
-interface Need { sku_target: string; outstanding: number; size_status: string }
 interface LedgerRow {
   id: number; tanggal: string; tx_type: string; sku_code: string; sku_label: string; qty: number; stock_status: string; nik: string | null
   nama_karyawan: string | null; reason: string | null; ref_doc: string | null; affects_stock: boolean; created_by_nama: string | null; created_at: string
@@ -29,20 +29,19 @@ export default function StockPage() {
   const [params, setParams] = useSearchParams()
   const tab = (params.get('tab') as TabKey) ?? 'sku'
   const setTab = (t: TabKey) => { const p = new URLSearchParams(params); p.set('tab', t); setParams(p, { replace: true }) }
-  const stock = useView<StockRow>('v_stock_sku', { filters: [['active', 'eq', true]], order: [['item_sort', 'asc'], ['gender', 'asc'], ['size_order', 'asc']] })
-  const needQ = useView<Need>('v_outstanding', { columns: 'sku_target,outstanding,size_status' })
-  const need = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const n of needQ.data ?? []) if (n.sku_target && n.size_status === 'OK') m.set(n.sku_target, (m.get(n.sku_target) ?? 0) + n.outstanding)
-    return m
-  }, [needQ.data])
+  // v_sku_planning = stok per SKU + dalam pemesanan + kebutuhan antrian + status perencanaan (M3)
+  const stock = useView<StockRow>('v_sku_planning', { filters: [['active', 'eq', true]], order: [['item_sort', 'asc'], ['gender', 'asc'], ['size_order', 'asc']] })
+  const need = useMemo(() => new Map((stock.data ?? []).map((s) => [s.sku_code, s.pipeline_demand])), [stock.data])
   const nav = useNavigate()
   const { canWrite } = usePerm()
   const noStock = stock.data && stock.data.every((s) => s.layak + s.karantina + s.cadangan + s.afkir === 0)
 
   return (
     <Page title="Stok" subtitle="Dihitung dari transaksi — tidak ada angka stok yang diketik manual" help="stok"
-      actions={canWrite && <Button variant="primary" icon={<ClipboardCheck className="size-4" />} onClick={() => nav('/opname')}>Stock opname</Button>}>
+      actions={<>
+        <Button icon={<ShoppingCart className="size-4" />} onClick={() => nav('/pengadaan')}>Saran order & PO</Button>
+        {canWrite && <Button variant="primary" icon={<ClipboardCheck className="size-4" />} onClick={() => nav('/opname')}>Stock opname</Button>}
+      </>}>
       {noStock && (
         <Callout tone="blue" title="Stok awal belum terbentuk" action={canWrite && <Button size="sm" variant="soft" onClick={() => nav('/opname')}>Mulai opname pertama</Button>}>
           Stok hanya bisa masuk lewat transaksi. Saldo awal dibentuk dari stock opname pertama yang disetujui admin.
@@ -69,7 +68,7 @@ function SkuTable({ stock, need }: { stock: ReturnType<typeof useView<StockRow>>
   const data = useMemo(() => (stock.data ?? []).filter((s) => {
     const n = need.get(s.sku_code) ?? 0
     return (!item || s.item_code === item) &&
-      (!filter || (filter === 'habis' && s.available <= 0) || (filter === 'kurang' && s.available < n) || (filter === 'karantina' && s.karantina > 0))
+      (!filter || (filter === 'habis' && s.available <= 0) || (filter === 'kurang' && s.available < n) || (filter === 'karantina' && s.karantina > 0) || s.status === filter)
   }), [stock.data, item, filter, need])
 
   const columns = useMemo<ColumnDef<StockRow>[]>(() => [
@@ -79,13 +78,18 @@ function SkuTable({ stock, need }: { stock: ReturnType<typeof useView<StockRow>>
     { accessorKey: 'reserved', header: () => <Term tip="Sudah dialokasikan ke batch yang belum dikirim (aktif di modul Distribusi).">Reserved</Term>, meta: { align: 'right', exportHeader: 'Reserved' } },
     { accessorKey: 'available', header: () => <Term tip="Available = stok Layak − Reserved. Hanya ini yang bisa dikirim.">Available</Term>, meta: { align: 'right', exportHeader: 'Available' },
       cell: (c) => <span className={clsx('font-bold', (c.getValue() as number) <= 0 ? 'text-red-600' : 'text-ink')}>{fmtNum(c.getValue() as number)}</span> },
-    { id: 'need', header: () => <Term tip="Total outstanding karyawan aktif & joiner untuk SKU ini (ukuran valid).">Kebutuhan antrian</Term>, accessorFn: (s) => need.get(s.sku_code) ?? 0, meta: { align: 'right', exportHeader: 'Kebutuhan antrian' } },
-    { id: 'status', header: 'Status', enableSorting: false, meta: { exportValue: (s) => statusOf(s, need.get(s.sku_code) ?? 0).label },
-      cell: ({ row: { original: s } }) => { const st = statusOf(s, need.get(s.sku_code) ?? 0); return <Chip tone={st.tone}>{st.label}</Chip> } },
+    { accessorKey: 'pipeline_demand', header: () => <Term tip="Hak karyawan aktif & joiner (ukuran valid) yang belum masuk batch.">Kebutuhan antrian</Term>, meta: { align: 'right', exportHeader: 'Kebutuhan antrian' } },
+    { accessorKey: 'on_order', header: () => <Term tip="Sisa PO yang sudah dikirim ke vendor dan belum diterima.">Dalam pemesanan</Term>, meta: { align: 'right', exportHeader: 'Dalam pemesanan' } },
+    { accessorKey: 'status', header: () => <Term tip="Kritis: tidak cukup untuk antrian atau ≤ safety stock. Perlu order: sudah di titik pesan ulang. Detail di menu Pengadaan.">Status</Term>,
+      meta: { exportHeader: 'Status', exportValue: (s) => PLAN_STATUS_LABEL[s.status] },
+      cell: ({ row: { original: s } }) => (
+        <div className="flex flex-wrap items-center gap-1"><Chip tone={PLAN_STATUS_TONE[s.status]}>{PLAN_STATUS_LABEL[s.status]}</Chip>
+          {s.available < s.pipeline_demand && <span className="text-xs font-semibold text-red-600">kurang {s.pipeline_demand - s.available}</span>}</div>
+      ) },
     { accessorKey: 'karantina', header: () => <Term tip="Barang kembali yang belum di-QC. Tidak bisa dialokasikan.">Karantina</Term>, meta: { align: 'right', exportHeader: 'Karantina' } },
     { accessorKey: 'cadangan', header: 'Cadangan', meta: { align: 'right' } },
     { accessorKey: 'afkir', header: 'Afkir', meta: { align: 'right' } },
-  ], [need])
+  ], [])
 
   return (
     <Card bodyClass="p-0">
@@ -100,17 +104,12 @@ function SkuTable({ stock, need }: { stock: ReturnType<typeof useView<StockRow>>
             <option value="kurang">Tidak cukup untuk antrian</option>
             <option value="habis">Habis (available ≤ 0)</option>
             <option value="karantina">Ada barang karantina</option>
+            <option value="KRITIS">Status kritis</option>
+            <option value="ORDER">Status perlu order</option>
           </Select>
         </>} />
     </Card>
   )
-}
-
-function statusOf(s: StockRow, need: number): { label: string; tone: 'red' | 'amber' | 'green' | 'slate' } {
-  if (s.available <= 0 && need > 0) return { label: 'Habis — dibutuhkan', tone: 'red' }
-  if (s.available < need) return { label: `Kurang ${need - s.available}`, tone: 'red' }
-  if (s.available <= 0) return { label: 'Habis', tone: 'amber' }
-  return { label: 'Cukup', tone: 'green' }
 }
 
 function Heatmap({ rows, need, loading }: { rows: StockRow[]; need: Map<string, number>; loading: boolean }) {

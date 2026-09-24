@@ -20,9 +20,9 @@ export const DEMO_USERS = [
   { id: '00000000-0000-0000-0000-00000000000c', email: 'dewi@alpro.demo', nama: 'Dewi Lestari', role: 'viewer', jabatan: 'Finance (Viewer)' },
 ] as const
 
-// Versi berubah bila isi migration berubah → database demo dibuat ulang.
+// Versi berubah bila isi migration, seed, atau data contoh berubah → database demo dibuat ulang.
 function schemaVersion() {
-  const all = Object.keys(migrations).sort().map((k) => migrations[k]).join('\n') + seedSql
+  const all = Object.keys(migrations).sort().map((k) => migrations[k]).join('\n') + seedSql + loadDemoData.toString()
   let h = 0
   for (let i = 0; i < all.length; i++) h = (Math.imul(31, h) + all.charCodeAt(i)) | 0
   return (h >>> 0).toString(36)

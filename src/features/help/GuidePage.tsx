@@ -75,8 +75,33 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
       <ul className="list-disc space-y-1.5 pl-5">
         <li>Stok = jumlah semua transaksi. Tidak ada angka stok yang bisa diketik; koreksi selalu lewat opname atau transaksi koreksi (reversal) oleh admin.</li>
         <li><b>Available</b> = Layak − Reserved. <b>Karantina</b> = barang kembali yang belum di-QC, tidak bisa dikirim.</li>
-        <li><b>Kebutuhan antrian</b> = total yang harus dikirim ke karyawan untuk SKU tersebut.</li>
+        <li><b>Kebutuhan antrian</b> = hak karyawan yang belum masuk batch untuk SKU tersebut. <b>Dalam pemesanan</b> = sisa PO yang sudah dikirim ke vendor.</li>
       </ul>
+    ),
+  },
+  {
+    id: 'pengadaan', title: 'Pengadaan: saran order & purchase order', body: (
+      <div className="space-y-3">
+        <ol className="list-decimal space-y-1.5 pl-5">
+          <li>Buka <Link to="/pengadaan" className="font-semibold text-brand-600">Pengadaan</Link>. Mulai dari SKU <b>Kritis</b>, lalu <b>Perlu order</b>.</li>
+          <li>Centang SKU (atau klik <b>Buat PO dari saran</b>). Sistem membuat satu PO per vendor dengan qty = saran order; ubah qty bila perlu, lalu simpan sebagai draft.</li>
+          <li>Periksa PO draft → <b>Cetak PO</b> → kirim ke vendor → klik <b>Kirim ke vendor</b>. Sejak itu qty dihitung <i>dalam pemesanan</i> dan tidak disarankan lagi.</li>
+          <li>Saat barang datang, hitung fisik lalu <b>Terima barang</b> sesuai surat jalan. Boleh bertahap; stok Layak langsung bertambah.</li>
+          <li>Vendor tidak sanggup mengirim sisa? <b>Tutup PO</b> dengan alasan, supaya sisa tidak lagi dianggap akan datang.</li>
+        </ol>
+        <div className="rounded-xl bg-slate-50 p-3 font-mono text-xs leading-6 text-slate-700">
+          Rata-rata/bln = keluar (kirim + beli + tukar) dalam jendela histori ÷ jumlah bulan<br />
+          Safety stock (SS) = rata-rata × parameter SS (bulan)<br />
+          ROP = rata-rata × lead time/30 + SS<br />
+          Saran order = rata-rata × cakupan order + SS + kebutuhan antrian − available − dalam pemesanan, dibulatkan ke pcs terdekat, lalu ke atas ke kelipatan MOQ
+        </div>
+        <ul className="list-disc space-y-1.5 pl-5">
+          <li><b>Kritis</b>: available kurang dari kebutuhan antrian, atau ≤ SS. <b>Perlu order</b>: available + dalam pemesanan ≤ ROP. Selain itu <b>Aman</b>. SS/ROP di bawah ½ pcs diabaikan supaya ukuran yang sangat jarang dipakai tidak selalu merah.</li>
+          <li>SKU tanpa histori memakai perkiraan: rencana hire/bulan × rata-rata qty item per karyawan × size curve (bertanda "perkiraan").</li>
+          <li>Kebutuhan cabang baru ikut terhitung setelah karyawannya masuk data PPM (sebagai joiner).</li>
+          <li>Parameter (SS, cakupan order, jendela histori, rencana hire, lead time default) diatur admin di Parameter; lead time & MOQ per SKU di Harga & Vendor.</li>
+        </ul>
+      </div>
     ),
   },
   {

@@ -23,6 +23,9 @@ import UsersPage from './features/master/UsersPage'
 import MigrationPage from './features/migrasi/MigrationPage'
 import OpnamePage from './features/opname/OpnamePage'
 import OverviewPage from './features/overview/OverviewPage'
+import PengadaanPage from './features/pengadaan/PengadaanPage'
+import PoDetailPage from './features/pengadaan/PoDetailPage'
+import PoPrintPage from './features/pengadaan/PoPrintPage'
 import StockPage from './features/stock/StockPage'
 import { DbProvider } from './lib/api'
 import { useAuth } from './lib/auth'
@@ -57,6 +60,7 @@ export default function App() {
       ) : (
         <Routes>
           <Route path="cetak/batch/:id/:doc" element={<PrintPage />} />
+          <Route path="cetak/po/:id" element={<PoPrintPage />} />
           <Route element={<AppShell />}>
             <Route index element={<OverviewPage />} />
             <Route path="import" element={<ImportPage />} />
@@ -66,6 +70,8 @@ export default function App() {
             <Route path="karyawan" element={<EmployeesPage />} />
             <Route path="stok" element={<StockPage />} />
             <Route path="opname" element={<OpnamePage />} />
+            <Route path="pengadaan" element={<PengadaanPage />} />
+            <Route path="pengadaan/po/:id" element={<PoDetailPage />} />
             <Route path="master/paket" element={<PackagesPage />} />
             <Route path="master/jabatan" element={<PositionsPage />} />
             <Route path="master/override" element={<OverridesPage />} />

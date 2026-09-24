@@ -68,6 +68,13 @@ export default function OverviewPage() {
           sub={k ? `dari ${fmtNum(k.sku_aktif)} SKU aktif` : ''}
           target="0" ok={k ? k.sku_stockout === 0 : undefined}
           icon={<Boxes className="size-5" />} tone="red" onClick={() => nav('/stok?filter=habis')}
+          footer={alerts.data && (
+            <Link to="/pengadaan" onClick={(e) => e.stopPropagation()} className="mt-3 flex flex-wrap gap-1.5 text-xs font-semibold">
+              <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-700 ring-1 ring-inset ring-red-200">{alerts.data.find((x) => x.kode === 'SKU_KRITIS')?.jumlah ?? 0} kritis</span>
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 ring-1 ring-inset ring-amber-200">{alerts.data.find((x) => x.kode === 'SKU_ORDER')?.jumlah ?? 0} perlu order</span>
+              <span className="text-brand-600 hover:underline">Saran order →</span>
+            </Link>
+          )}
         />
         <KpiCard
           loading={months.isLoading}

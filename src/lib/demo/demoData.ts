@@ -1,4 +1,5 @@
 import type { PGliteInterface } from '@electric-sql/pglite'
+import { isoToday } from '../format'
 
 /**
  * Data contoh untuk mode demo: cabang, vendor & harga, mapping jabatan,
@@ -159,6 +160,29 @@ export async function loadDemoData(db: PGliteInterface, call: Call, onProgress?:
   for (const c of cab.slice(0, Math.ceil(cab.length * 0.7))) {
     await call('fn_batch_receive', { batch_id: bt.id, kode_cabang: c.kode_cabang, tanggal: '2026-09-22' })
   }
+
+  // Pengadaan: PO diterima lengkap, diterima sebagian, terlambat, dan satu draft dari saran order
+  onProgress?.('Membuat purchase order contoh…')
+  const vid = Object.fromEntries((await db.query<{ id: number; nama: string }>('select id, nama from seragam.vendor')).rows.map((v) => [v.nama, v.id]))
+  const konveksi = vid['PT Konveksi Sinar Jaya']
+  const polo = vid['CV Polo Nusantara']
+  const mkPo = async (vendor_id: number, tanggal: string, lines: [string, number][], extra: Record<string, unknown> = {}) =>
+    (await call('fn_po_create', { pos: [{ vendor_id, tanggal, lines: lines.map(([sku_code, qty]) => ({ sku_code, qty })), ...extra }] })).ids[0] as number
+  const po1 = await mkPo(konveksi, '2026-08-10', [['KMJ-W-M', 24], ['KMJ-W-L', 24], ['KMJ-P-L', 12]])
+  await call('fn_po_send', { id: po1, tanggal: '2026-08-11' })
+  await call('fn_po_receive', { id: po1, tanggal: '2026-09-10', no_surat_jalan: 'SJ/KSJ/0910/031', lines: [
+    { sku_code: 'KMJ-W-M', qty: 24 }, { sku_code: 'KMJ-W-L', qty: 24 }, { sku_code: 'KMJ-P-L', qty: 12 },
+  ] })
+  const po2 = await mkPo(polo, '2026-09-08', [['POLO-U-M', 24], ['POLO-U-L', 24], ['POLO-U-XL', 12]], { eta: '2026-10-08', catatan: 'Logo bordir dada kiri' })
+  await call('fn_po_send', { id: po2, tanggal: '2026-09-09' })
+  await call('fn_po_receive', { id: po2, tanggal: '2026-09-20', no_surat_jalan: 'PN-0920-07', lines: [{ sku_code: 'POLO-U-M', qty: 24 }, { sku_code: 'POLO-U-L', qty: 12 }] })
+  const po3 = await mkPo(konveksi, '2026-08-20', [['BLZ-TTK-W-L', 6], ['BLZ-TTK-W-XL', 6], ['BLZ-APT-W-M', 6]], { eta: '2026-09-15' })
+  await call('fn_po_send', { id: po3, tanggal: '2026-08-21' })
+  const saran = (await db.query<{ sku_code: string; suggested_order: number }>(
+    `select sku_code, suggested_order from seragam.v_sku_planning
+      where active and status = 'KRITIS' and suggested_order > 0 and vendor_id = $1 order by item_sort, gender, size_order limit 5`, [konveksi])).rows
+  if (saran.length) await mkPo(konveksi, isoToday(), saran.map((s) => [s.sku_code, Number(s.suggested_order)] as [string, number]), { catatan: 'Dari saran order' })
+  await db.query(`update seragam.purchase_order set created_at = (tanggal + time '10:00') at time zone 'Asia/Jakarta' where tanggal < current_date`)
 
   // Hire mendadak setelah cutoff → menunggu batch ad-hoc
   await call('fn_hire_event', {

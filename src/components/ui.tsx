@@ -119,9 +119,11 @@ export function InfoTip({ children, label = 'Penjelasan' }: { children: ReactNod
   return (
     <Tooltip.Root delayDuration={150}>
       <Tooltip.Trigger asChild>
-        <button type="button" aria-label={label} className="inline-flex align-middle text-slate-400 hover:text-brand-600">
+        {/* span, bukan button: InfoTip sering berada di dalam tombol sort header tabel (button bersarang tidak valid) */}
+        <span role="button" tabIndex={0} aria-label={label} onClick={(e) => e.stopPropagation()}
+          className="inline-flex cursor-help align-middle text-slate-400 hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-brand-400">
           <HelpCircle className="size-3.5" />
-        </button>
+        </span>
       </Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content sideOffset={6} className="z-[70] max-w-xs rounded-lg bg-slate-900 px-3 py-2 text-xs leading-relaxed text-white shadow-lg">
