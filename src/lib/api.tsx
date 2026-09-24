@@ -41,8 +41,9 @@ export function useRpc<P = unknown, R = any>(fn: string, options: RpcOptions<R> 
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (p: P) => db.rpc<R>(fn, p),
-    onSuccess: async (r) => {
-      if (options.invalidate !== false) await qc.invalidateQueries()
+    onSuccess: (r) => {
+      // Tidak ditunggu: dialog langsung tertutup, data diperbarui di latar (tabel menampilkan indikator muat).
+      if (options.invalidate !== false) void qc.invalidateQueries()
       if (options.success) toast.success(typeof options.success === 'function' ? options.success(r) : options.success)
     },
     onError: (e) => {

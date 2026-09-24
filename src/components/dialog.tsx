@@ -17,6 +17,8 @@ export function Modal({ open, onOpenChange, title, description, children, footer
             'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl bg-white shadow-2xl',
             { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' }[size],
           )}
+          // Klik di luar tidak menutup modal: isian form tidak hilang karena salah klik (tutup lewat ✕, Batal, atau Esc).
+          onInteractOutside={(e) => e.preventDefault()}
         >
           <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
             <div>

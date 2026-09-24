@@ -4,9 +4,8 @@ Dashboard kerja staf Ops Support: alokasi, stok, distribusi, dan retur seragam. 
 PRD: `C:\Users\ALPNB092\Downloads\PRD_Dashboard_Seragam_OpsSupport.md` (rujuk § nomor PRD di komentar/commit).
 
 ## Status milestone
-- ✅ M1 Fondasi · ✅ M2 Distribusi (migration sudah dijalankan di Supabase user) · ✅ M3 Stok & Pengadaan (`20260926000001_m3_pengadaan.sql`)
-- ⏭ **M4 Transaksi & Retur**: tukar ≤14 hari (EXC_OUT + EXC_IN, alasan), beli + export potong gaji (SALE), retur resign/mutasi/no-show (RET → KARANTINA), QC (QC_MOVE), afkir (DISPOSE), AC #5, 7, 8, 10, 12 (PRD §4.3–4.9, §7.6–7.7).
-- M5 KPI lengkap + email + link konfirmasi APA.
+- ✅ M1 Fondasi · ✅ M2 Distribusi · ✅ M3 Stok & Pengadaan (semua migration sudah dijalankan user) · ✅ M4 Transaksi & Retur (`20260927000001_m4_transaksi_retur.sql`)
+- ⏭ **M5 Monitoring**: KPI lengkap + tren 6 bulan (PRD §2, sebagian sudah ada di Beranda), alert lengkap, email harian (Edge Function + pg_cron, penerima & layanan kirim perlu ditanyakan ke user), link konfirmasi terima untuk APA (role `apa`), laporan KPI bulanan.
 - Setiap milestone ditutup dengan audit UX (skill `ux-heuristics-audit`, lulus bila tidak ada skor 3–4) → `docs/UX-audit-Mx.md`.
 
 ## Stack & perintah
@@ -24,11 +23,13 @@ Port 5175 dipakai proyek lain user (Antigravity) — jangan diganggu.
 - **Tulis hanya lewat RPC** `seragam.fn_*(p jsonb) returns jsonb`, security definer, `perform seragam.require_role(...)` di awal. Tabel tidak punya policy INSERT/UPDATE/DELETE. Error: `raise exception 'KODE: pesan Indonesia'` (kode dipetakan di `src/lib/errors.ts`).
 - **Ledger immutable** (trigger tolak UPDATE/DELETE/TRUNCATE). Tulis ledger hanya via `seragam._ledger_insert(...)` (cek stok negatif, param `p_batch`). Koreksi = REVERSAL. Stok = SUM ledger (`v_stock`, `v_stock_sku`); tidak ada angka stok yang disimpan.
 - **Perhitungan PRD §6 ada di view SQL** (security_invoker): `v_employee_package` → `v_entitlement` → `v_issued` → `v_employee_item` → `v_outstanding` → `v_queue` (dikurangi batch terbuka) ; `v_reserved` dari batch DRAFT/PICKING/PACKED.
-- **Migration baru = file baru** `supabase/migrations/YYYYMMDD00000N_*.sql`. Jangan ubah migration yang sudah dijalankan user (M1 `20260924…`, M2 `20260925000001`, M3 `20260926000001` setelah user menjalankannya). Akhiri dengan RLS + grant untuk objek baru dan `revoke execute` untuk fungsi internal `_*`.
+- **Migration baru = file baru** `supabase/migrations/YYYYMMDD00000N_*.sql`. Jangan ubah migration yang sudah dijalankan user (M1 `20260924…`, M2 `20260925000001`, M3 `20260926000001`, M4 `20260927000001` setelah user menjalankannya). Akhiri dengan RLS + grant untuk objek baru dan `revoke execute` untuk fungsi internal `_*`.
 - **Performa**: filter pada view turunan `v_outstanding` bisa didorong optimizer → O(n²). Pasang pagar `from (select * from seragam.v_outstanding offset 0) o`, dan CTE `as materialized` di view agregat (lihat `v_alert`, `v_kpi_current`). Test `perf.test.ts` dikalibrasi relatif ke kecepatan mesin (batas 40× unit).
 - **Frontend data layer**: `src/lib/db.ts` (`Db.select(view, {filters, order, limit, columns})`, `Db.rpc`, `uploadFile/fileUrl`), implementasi Supabase & demo (`src/lib/demo/demoDb.ts`, PGlite di Web Worker, satu inisialisasi bersama + penanda `demo_store.ready`). Hooks: `useView`, `useRpc` (toast sukses/error, invalidate semua query), `useRpcQuery` di `src/lib/api.tsx`.
 - Data demo: `src/lib/demo/demoData.ts` (deterministik; ubah migration/seed/demoData → DB demo otomatis dibuat ulang).
 - **Pengadaan (M3)**: `v_sku_planning` (per SKU: stok, on_order, qty_po_draft, pipeline, avg/SS/ROP, suggested_order, status). Status PO SENT/PARTIAL/RECEIVED **dihitung** di `v_po` dari ledger IN (± REVERSAL); tabel hanya menyimpan `fase` DRAFT/DIKIRIM/DIBATALKAN/DITUTUP. `_ledger_insert` punya `p_po`, `p_receipt`. `v_alert` memakai `v_sku_planning` → jaga agar planning tidak memanggil `v_queue`/`v_outstanding` (pipeline dihitung dari CTE `ent`).
+- **Transaksi & retur (M4)**: `exchange` (EXC_IN +KARANTINA & EXC_OUT −LAYAK, `pair_id`), `sale` (SALE, `periode_potong`), `return_receipt` (RET +KARANTINA), `return_writeoff`. Kewajiban retur = view `v_return_leaver` (murah, dipakai alert) + `v_return_obligation` (termasuk kelebihan hak/mutasi dari `v_employee_item`). QC per lot: `v_karantina_lot` (lot = baris masuk KARANTINA), `fn_qc` menulis QC_MOVE dua baris dengan `lot_id` & `pair_id`. `fn_ledger_reverse` membalik pasangan dua-baris dan menolak lot yang sudah di-QC. `_ledger_insert` kini 20 parameter (p_sale, p_exchange, p_return, p_lot, p_pair).
+- `useRpc` tidak menunggu refetch (invalidate di latar) supaya dialog cepat tertutup; `Modal` tidak tertutup oleh klik di luar.
 
 ## Konvensi UI (konsisten dgn app Alpro: Room Booking HQ, Lapor Sales, Short ED)
 - Token tema di `src/index.css` (`brand-*` oranye, font Plus Jakarta Sans). Gunakan `cn()` dari `components/ui.tsx` (tailwind-merge).

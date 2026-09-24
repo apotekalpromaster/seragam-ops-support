@@ -105,6 +105,50 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
     ),
   },
   {
+    id: 'transaksi', title: 'Tukar barang cacat & pembelian', body: (
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li><b>Tukar</b> hanya untuk <b>cacat produksi</b> atau <b>deviasi spek vendor</b>, paling lambat sesuai batas hari (default 14) sejak barang dikirim, dan wajib nama atasan yang menyetujui. Barang cacat masuk <i>karantina</i>, pengganti keluar dari stok layak.</li>
+        <li>Salah pilih ukuran atau lewat batas → sistem menolak dan menawarkan <b>Proses sebagai pembelian</b>.</li>
+        <li><b>Pembelian</b>: harga otomatis dari price list, periode potong gaji wajib. Barang beli tidak dihitung pemenuhan hak dan tidak wajib dikembalikan saat resign.</li>
+        <li>Salah input pembelian → admin klik <b>Batalkan</b>; barang kembali ke stok dan hilang dari export potong gaji.</li>
+        <li>Tukar/beli juga bisa langsung dari kartu karyawan.</li>
+      </ul>
+    ),
+  },
+  {
+    id: 'retur', title: 'Resign & pengembalian', body: (
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li>Daftar <b>wajib kembali</b> terbentuk otomatis dari data PPM: resign, PKL selesai, batal join, no-show (tidak hadir sampai masa tunggu), dan mutasi/promosi yang membuat item tidak lagi menjadi hak (mis. Blazer TTK saat jadi Apoteker).</li>
+        <li>Yang wajib kembali = item alokasi netto yang pernah diterima. Barang hasil beli tidak termasuk.</li>
+        <li>Barang tiba di gudang → <b>Catat pengembalian</b> (boleh sebagian). Barang masuk karantina sampai di-QC.</li>
+        <li><b>Permintaan retur ke cabang</b>: paket joiner batal join/no-show yang masih ditahan APA. Export daftar dan kirim ke cabang.</li>
+        <li>Barang yang tidak mungkin kembali: admin klik <b>Hapuskan…</b> dengan alasan (status Dihapuskan). Nilai outstanding hanya informasi; aturan tagih masih TBD.</li>
+        <li>Tab <b>Akan resign</b>: rencana resign dari PPM, supaya APA mengambil seragam di hari terakhir.</li>
+      </ul>
+    ),
+  },
+  {
+    id: 'qc', title: 'QC & afkir', body: (
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li>Barang karantina tidak bisa dikirim. QC per piece: <b>A</b> layak pakai, <b>B</b> cacat minor → Cadangan, <b>C</b> rusak → Afkir.</li>
+        <li>Grade A barang <b>bekas pakai</b> masuk Cadangan selama parameter "Retur grade A boleh untuk joiner baru" = Tidak. Barang batal join/no-show (belum dipakai) grade A langsung Layak.</li>
+        <li>Centang beberapa baris → <b>Semua grade A</b> untuk QC cepat.</li>
+        <li>Afkir: musnahkan logo, lalu <b>Catat pemusnahan</b> (tanggal, cara, saksi).</li>
+        <li>Salah grade → admin koreksi di Stok → Riwayat transaksi (kedua baris QC dibalik bersama).</li>
+      </ul>
+    ),
+  },
+  {
+    id: 'laporan', title: 'Laporan & export', body: (
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li><b>Potong gaji</b>: pilih periode → Export XLSX → kirim ke Payroll. Pembelian yang dibatalkan tidak ikut.</li>
+        <li><b>Outstanding resign</b>: sisa seragam karyawan resign/PKL beserta nilai (harga price list).</li>
+        <li><b>Rekap tukar per SKU</b>: tingkat tukar 12 bulan per SKU & vendor; ≥ 3% ditandai merah.</li>
+        <li>Semua tabel lain di aplikasi juga bisa di-export lewat tombol Export XLSX.</li>
+      </ul>
+    ),
+  },
+  {
     id: 'paket', title: 'Paket alokasi', body: (
       <ul className="list-disc space-y-1.5 pl-5">
         <li>Mengubah qty membuat <b>versi baru</b>. Pilih cakupan: <b>Hanya karyawan baru</b> (rencana join ≥ tanggal berlaku) atau <b>Semua karyawan aktif</b>.</li>

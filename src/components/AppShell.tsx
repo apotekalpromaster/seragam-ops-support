@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import {
   BookOpen, Boxes, CalendarDays, ClipboardCheck, Clock, Database, FileClock, FileUp, Home, LogOut, Menu, Package,
-  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck, ShoppingCart,
+  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck, ShoppingCart, Repeat, Undo2, ShieldCheck, BarChart3,
 } from 'lucide-react'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -35,6 +35,15 @@ function useNav(): { group: string; items: NavItem[] }[] {
         { to: '/stok', label: 'Stok', icon: <Boxes /> },
         { to: '/pengadaan', label: 'Pengadaan', icon: <ShoppingCart />, badge: a('SKU_KRITIS') || a('SKU_ORDER') || undefined, badgeTone: a('SKU_KRITIS') ? 'red' : 'amber' },
         { to: '/opname', label: 'Stock Opname', icon: <ClipboardCheck />, badge: opname?.length || undefined, badgeTone: 'brand' },
+      ],
+    },
+    {
+      group: 'Transaksi',
+      items: [
+        { to: '/transaksi', label: 'Tukar & Pembelian', icon: <Repeat /> },
+        { to: '/retur', label: 'Pengembalian', icon: <Undo2 />, badge: (a('RETUR_TERLAMBAT') ?? 0) + (a('PERMINTAAN_RETUR') ?? 0) || undefined, badgeTone: a('RETUR_TERLAMBAT') ? 'red' : 'amber' },
+        { to: '/qc', label: 'QC & Afkir', icon: <ShieldCheck />, badge: a('QC_MENUNGGU'), badgeTone: 'brand' },
+        { to: '/laporan', label: 'Laporan & Export', icon: <BarChart3 /> },
       ],
     },
     {

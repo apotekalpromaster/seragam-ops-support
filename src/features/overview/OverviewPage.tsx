@@ -18,6 +18,8 @@ interface ImportMonth { periode: string; tepat_waktu: boolean; ada_import: boole
 interface ImportLog { id: number; file_name: string; committed_at: string; n_new: number; n_resign: number; n_mutasi: number; n_error: number; status: string; total_rows: number }
 interface BatchMonth { periode: string; batch_dikirim: number; tepat_waktu: number }
 interface JoinerMonth { periode: string; joiner: number; tiba_sebelum_join: number; late_hire: number }
+interface ExMonth { periode: string; tukar: number; issue: number }
+interface KpiReturn { dikembalikan: number; sisa: number; dihapuskan: number; karyawan_belum: number }
 interface Ship { nik: string; penyerahan: string; batch_kode: string }
 interface Joiner { nik: string; nama: string; jabatan: string; cabang_nama: string; planned_join_date: string; outstanding_total: number; size_problem: boolean; jabatan_unmapped: boolean }
 
@@ -29,12 +31,16 @@ export default function OverviewPage() {
   const joiners = useView<Joiner>('v_employee_list', { filters: [['status', 'eq', 'OFFERING']], order: [['planned_join_date', 'asc']] })
   const bm = useView<BatchMonth>('v_kpi_batch_monthly', { order: [['periode', 'asc']] })
   const jm = useView<JoinerMonth>('v_kpi_joiner_monthly', { order: [['periode', 'asc']] })
+  const exm = useView<ExMonth>('v_kpi_exchange_monthly', { order: [['periode', 'asc']] })
+  const kr = useView<KpiReturn>('v_kpi_return').data?.[0]
   const ships = useView<Ship>('v_batch_line', { columns: 'nik,penyerahan,batch_kode', filters: [['employee_status', 'eq', 'OFFERING'], ['penyerahan', 'neq', 'DIBATALKAN']] })
   const shipOf = (nik: string) => ships.data?.find((x) => x.nik === nik)
   const sum = <T,>(rows: T[] | undefined, k: keyof T) => (rows ?? []).reduce((a, r) => a + Number(r[k] ?? 0), 0)
   const batchPct = sum(bm.data, 'batch_dikirim') ? (sum(bm.data, 'tepat_waktu') / sum(bm.data, 'batch_dikirim')) * 100 : null
   const tibaPct = sum(jm.data, 'joiner') ? (sum(jm.data, 'tiba_sebelum_join') / sum(jm.data, 'joiner')) * 100 : null
   const latePct = sum(jm.data, 'joiner') ? (sum(jm.data, 'late_hire') / sum(jm.data, 'joiner')) * 100 : null
+  const tukarPct = sum(exm.data, 'issue') ? (sum(exm.data, 'tukar') / sum(exm.data, 'issue')) * 100 : null
+  const returPct = kr && kr.dikembalikan + kr.sisa + kr.dihapuskan > 0 ? (kr.dikembalikan / (kr.dikembalikan + kr.sisa + kr.dihapuskan)) * 100 : null
   const { isAdmin } = usePerm()
   const nav = useNavigate()
   const k = kpi.data?.[0]
@@ -178,6 +184,15 @@ export default function OverviewPage() {
           sub={`${sum(jm.data, 'late_hire')} dari ${sum(jm.data, 'joiner')} joiner`} target="≤ 10%" ok={latePct === null ? undefined : latePct <= 10} />
       </Card>
 
+      <Card title="KPI transaksi & retur" subtitle="Tukar 6 bulan terakhir · retur semua karyawan resign" bodyClass="grid gap-4 p-5 md:grid-cols-2"
+        actions={<Link to="/laporan" className="text-sm font-semibold text-brand-600 hover:underline">Laporan</Link>}>
+        <MiniKpi label="Tingkat tukar" tip="Barang pengganti tukar cacat ÷ barang dikirim ke karyawan (per bulan)." value={fmtPct(tukarPct, 1)}
+          sub={`${sum(exm.data, 'tukar')} tukar dari ${sum(exm.data, 'issue')} pcs dikirim`} target="< 3%" ok={tukarPct === null ? undefined : tukarPct < 3}
+          bars={exm.data?.map((m) => ({ key: m.periode, label: fmtMonthShort(m.periode).split(' ')[0], v: m.issue ? m.tukar / m.issue : null }))} />
+        <MiniKpi label="Return rate resign" tip="Item kembali ÷ item wajib kembali untuk karyawan resign & PKL selesai. Yang dihapuskan dihitung tidak kembali." value={fmtPct(returPct, 0)}
+          sub={kr ? `${kr.dikembalikan} kembali · ${kr.sisa} belum (${kr.karyawan_belum} karyawan)` : ''} target="≥ 90%" ok={returPct === null ? undefined : returPct >= 90} />
+      </Card>
+
       <Card title="Joiner akan datang" subtitle="Status OFFERING dari data PPM. Paket dikirim pada batch cutoff pertama di mana nama muncul." bodyClass="p-0"
         actions={<Link to="/karyawan?status=OFFERING" className="text-sm font-semibold text-brand-600 hover:underline">Lihat semua</Link>}>
         {joiners.isLoading ? <div className="p-5"><Skeleton className="h-24" /></div> : !joiners.data?.length ? (
@@ -217,7 +232,7 @@ export default function OverviewPage() {
       </Card>
 
       <p className="text-xs text-muted">
-        KPI no-show, tingkat tukar, return rate resign, dan akurasi stok aktif setelah modul Stok & Pengadaan serta Transaksi & Retur selesai dibangun.
+        KPI no-show dan akurasi stok (hasil opname) menyusul pada tahap monitoring, bersama tren 6 bulan untuk semua KPI.
       </p>
     </Page>
   )

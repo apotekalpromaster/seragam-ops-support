@@ -24,6 +24,10 @@ import MigrationPage from './features/migrasi/MigrationPage'
 import OpnamePage from './features/opname/OpnamePage'
 import OverviewPage from './features/overview/OverviewPage'
 import PengadaanPage from './features/pengadaan/PengadaanPage'
+import LaporanPage from './features/laporan/LaporanPage'
+import QcPage from './features/qc/QcPage'
+import ReturPage from './features/retur/ReturPage'
+import TransaksiPage from './features/transaksi/TransaksiPage'
 import PoDetailPage from './features/pengadaan/PoDetailPage'
 import PoPrintPage from './features/pengadaan/PoPrintPage'
 import StockPage from './features/stock/StockPage'
@@ -72,6 +76,10 @@ export default function App() {
             <Route path="opname" element={<OpnamePage />} />
             <Route path="pengadaan" element={<PengadaanPage />} />
             <Route path="pengadaan/po/:id" element={<PoDetailPage />} />
+            <Route path="transaksi" element={<TransaksiPage />} />
+            <Route path="retur" element={<ReturPage />} />
+            <Route path="qc" element={<QcPage />} />
+            <Route path="laporan" element={<LaporanPage />} />
             <Route path="master/paket" element={<PackagesPage />} />
             <Route path="master/jabatan" element={<PositionsPage />} />
             <Route path="master/override" element={<OverridesPage />} />

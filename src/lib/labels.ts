@@ -61,12 +61,13 @@ export const ENTITAS_LABEL: Record<string, string> = {
   config: 'Parameter', item: 'Item', item_size: 'Ukuran item', sku: 'SKU', sku_price: 'Harga SKU', vendor: 'Vendor',
   package: 'Paket', package_version: 'Versi paket', package_item: 'Isi paket', position_map: 'Mapping jabatan',
   employee_package_override: 'Override karyawan', branch: 'Cabang', size_curve: 'Size curve', size_chart: 'Size chart',
-  app_user: 'Pengguna', stock_opname: 'Stock opname', employee: 'Karyawan', purchase_order: 'Purchase order',
+  app_user: 'Pengguna', stock_opname: 'Stock opname', employee: 'Karyawan', purchase_order: 'Purchase order', sale: 'Pembelian karyawan',
 }
 
 export const AKSI_LABEL: Record<string, string> = {
   INSERT: 'Tambah', UPDATE: 'Ubah', DELETE: 'Hapus', UBAH_UKURAN: 'Ubah ukuran',
   PO_BUAT: 'Buat PO', PO_UBAH: 'Ubah PO', PO_KIRIM: 'Kirim PO ke vendor', PO_DRAFT: 'PO kembali ke draft', PO_BATAL: 'Batalkan PO', PO_TUTUP: 'Tutup PO', PO_TERIMA: 'Terima barang PO',
+  BATAL_BELI: 'Batalkan pembelian', HAPUS_KEWAJIBAN_RETUR: 'Hapuskan kewajiban retur',
 }
 
 export const OPNAME_STATUS_LABEL: Record<string, string> = {
@@ -95,3 +96,11 @@ export const PO_STATUS_LABEL: Record<string, string> = {
 export const PO_STATUS_TONE: Record<string, 'slate' | 'blue' | 'amber' | 'green'> = {
   DRAFT: 'slate', SENT: 'blue', PARTIAL: 'amber', RECEIVED: 'green', CANCELLED: 'slate',
 }
+
+export const EXCHANGE_ALASAN_LABEL: Record<string, string> = { CACAT_PRODUKSI: 'Cacat produksi', DEVIASI_SPEK_VENDOR: 'Deviasi spek vendor' }
+export const RETUR_SUMBER_LABEL: Record<string, string> = {
+  RESIGN: 'Resign', PKL_SELESAI: 'PKL/magang selesai', BATAL_JOIN: 'Batal join', NOSHOW: 'Tidak hadir (no-show)', MUTASI: 'Mutasi / di atas hak',
+  TUKAR: 'Tukar (barang cacat)', OPNAME: 'Hasil opname',
+}
+export const RETUR_STATUS_LABEL: Record<string, string> = { BELUM: 'Belum kembali', SEBAGIAN: 'Sebagian', LENGKAP: 'Lengkap', DIHAPUSKAN: 'Dihapuskan' }
+export const RETUR_STATUS_TONE: Record<string, 'red' | 'amber' | 'green' | 'slate'> = { BELUM: 'red', SEBAGIAN: 'amber', LENGKAP: 'green', DIHAPUSKAN: 'slate' }

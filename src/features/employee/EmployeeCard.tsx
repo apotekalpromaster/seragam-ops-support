@@ -1,18 +1,21 @@
-import { Pencil } from 'lucide-react'
+import { Pencil, Repeat, ShoppingBag, Undo2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Drawer, Modal } from '../../components/dialog'
 import { Button, Callout, Chip, Field, Input, LoadingBlock, Select } from '../../components/ui'
 import { useRpc, useView } from '../../lib/api'
 import { usePerm } from '../../lib/auth'
-import { fmtDate } from '../../lib/format'
-import { DIFF_LABEL, EMP_STATUS_LABEL, GENDER_LABEL, PENYERAHAN_LABEL, TX_LABEL } from '../../lib/labels'
+import { fmtDate, fmtMonth, fmtRp } from '../../lib/format'
+import { DIFF_LABEL, EMP_STATUS_LABEL, GENDER_LABEL, PENYERAHAN_LABEL, RETUR_STATUS_LABEL, RETUR_STATUS_TONE, RETUR_SUMBER_LABEL, TX_LABEL } from '../../lib/labels'
+import { ReturnModal, type ReturEmp } from '../retur/ReturPage'
+import { useTransaksiDialogs } from '../transaksi/dialogs'
 import type { EmployeeRow } from './EmployeesPage'
 
 interface ItemRow { item_code: string; item_nama: string; item_sort: number; entitlement: number; issued_net: number; outstanding: number; over_issued: number; sku_target: string | null; size_code: string | null; size_status: string | null; last_issue_date: string | null }
 interface LedgerRow { id: number; tanggal: string; tx_type: string; sku_label: string; qty: number; reason: string | null; ref_doc: string | null; affects_stock: boolean }
 interface DiffRow { id: number; change_type: string; old_value: string | null; new_value: string | null; import_id: number }
 interface ShipRow { id: number; batch_id: number; batch_kode: string; sku_label: string; qty: number; penyerahan: string; shipped_at: string | null; received_at: string | null; cabang_nama: string }
+interface SaleRow { id: number; kode: string; tanggal: string; periode_potong: string; nilai: number; items: { label: string; qty: number; dibatalkan: boolean }[]; dibatalkan: boolean }
 interface OverrideRow { package_code: string; alasan: string; created_by_nama: string | null; created_at: string }
 
 export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => void }) {
@@ -24,7 +27,13 @@ export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => voi
   const ships = useView<ShipRow>('v_batch_line', { filters: [['nik', 'eq', nik]], order: [['batch_id', 'desc']] })
   const { canWrite, isAdmin } = usePerm()
   const [editSize, setEditSize] = useState(false)
+  const retur = useView<ReturEmp>('v_return_employee', { filters: [['nik', 'eq', nik]] })
+  const sales = useView<SaleRow>('v_sale', { filters: [['nik', 'eq', nik]], order: [['id', 'desc']] })
+  const [ret, setRet] = useState<ReturEmp | null>(null)
+  const tx = useTransaksiDialogs()
   const e = emp.data?.[0]
+  const r = retur.data?.[0]
+  const picked = e && { nik: e.nik, nama: e.nama, gender: e.gender, jabatan: e.jabatan, kode_cabang: e.kode_cabang, cabang_nama: e.cabang_nama, status: e.status }
 
   return (
     <Drawer open onOpenChange={(o) => !o && onClose()} title={e?.nama ?? 'Kartu karyawan'} subtitle={e ? `${e.nik} · ${e.jabatan} · ${e.cabang_nama}` : undefined}>
@@ -37,6 +46,26 @@ export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => voi
             {e.jabatan_unmapped && <Chip tone="amber">Jabatan belum dimapping</Chip>}
             {e.over_issued_total > 0 && <Chip tone="amber">Menerima {e.over_issued_total} pcs di atas hak</Chip>}
           </div>
+          {canWrite && (
+            <div className="flex flex-wrap gap-2">
+              {['AKTIF', 'OFFERING'].includes(e.status) && <Button size="sm" icon={<Repeat className="size-3.5" />} onClick={() => tx.openExchange(picked)}>Tukar barang cacat</Button>}
+              {['AKTIF', 'OFFERING'].includes(e.status) && <Button size="sm" icon={<ShoppingBag className="size-3.5" />} onClick={() => tx.openSale(picked)}>Catat pembelian</Button>}
+              {r && r.sisa > 0 && <Button size="sm" variant="soft" icon={<Undo2 className="size-3.5" />} onClick={() => setRet(r)}>Catat pengembalian</Button>}
+            </div>
+          )}
+          {r && (
+            <Section title={`Wajib kembali · ${RETUR_SUMBER_LABEL[r.sumber]}`}>
+              <div className="rounded-xl border border-line bg-white p-3 text-sm">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <Chip tone={RETUR_STATUS_TONE[r.status]}>{RETUR_STATUS_LABEL[r.status]}</Chip>
+                  {r.sisa > 0 && <span className="text-muted">sisa {r.sisa} pcs · {fmtRp(r.nilai)}{r.aging_hari != null ? ` · ${r.aging_hari} hari` : ''}</span>}
+                </div>
+                <ul className="space-y-1">
+                  {r.items.map((i) => <li key={i.item_code} className="flex justify-between"><span>{i.item_nama}</span><span className="num">{i.sisa ? <b>sisa {i.sisa}</b> : <span className="text-emerald-700">selesai</span>} <span className="text-muted">/ {i.wajib}</span></span></li>)}
+                </ul>
+              </div>
+            </Section>
+          )}
 
           <Section title="Profil">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
@@ -119,6 +148,23 @@ export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => voi
             )}
           </Section>
 
+          {!!sales.data?.length && (
+            <Section title="Pembelian (potong gaji)">
+              <ul className="space-y-2">
+                {sales.data.map((s) => (
+                  <li key={s.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-white px-3 py-2 text-sm">
+                    <div>
+                      <p className="font-medium">{s.items.filter((i) => !i.dibatalkan).map((i) => `${i.label} × ${i.qty}`).join(', ') || s.items.map((i) => i.label).join(', ')}</p>
+                      <p className="text-xs text-muted">{s.kode} · {fmtDate(s.tanggal)} · potong gaji {fmtMonth(s.periode_potong)}</p>
+                    </div>
+                    {s.dibatalkan ? <Chip tone="slate">dibatalkan</Chip> : <span className="whitespace-nowrap font-bold num">{fmtRp(s.nilai)}</span>}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-muted">Barang beli bukan pemenuhan hak dan tidak wajib dikembalikan.</p>
+            </Section>
+          )}
+
           <Section title="Riwayat transaksi seragam">
             {!ledger.data?.length ? <p className="text-sm text-muted">Belum ada transaksi.</p> : (
               <ul className="space-y-2">
@@ -147,6 +193,8 @@ export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => voi
         </div>
       )}
       {editSize && e && <SizeModal emp={e} onClose={() => setEditSize(false)} />}
+      {ret && <ReturnModal emp={ret} onClose={() => setRet(null)} />}
+      {tx.dialogs}
     </Drawer>
   )
 }

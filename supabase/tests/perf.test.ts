@@ -33,7 +33,7 @@ describe('performa', () => {
     t = Date.now()
     await rpc(db, 'admin', 'fn_import_commit', { import_id: prev.id })
     timings.commit = Date.now() - t
-    for (const v of ['v_employee_list', 'v_outstanding', 'v_queue', 'v_alert', 'v_kpi_current', 'v_stock_sku', 'v_package', 'v_sku_planning', 'v_po']) {
+    for (const v of ['v_employee_list', 'v_outstanding', 'v_queue', 'v_alert', 'v_kpi_current', 'v_stock_sku', 'v_package', 'v_sku_planning', 'v_po', 'v_return_obligation', 'v_return_employee', 'v_karantina_lot', 'v_akan_resign']) {
       t = Date.now()
       await select(db, 'admin', v)
       timings[v] = Date.now() - t

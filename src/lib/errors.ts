@@ -24,6 +24,7 @@ const TITLES: Record<string, string> = {
   USER_TIDAK_ADA: 'Akun belum ada',
   KOSONG: 'Tidak ada yang bisa diproses',
   UPLOAD: 'Upload gagal',
+  TUKAR_DITOLAK: 'Tidak bisa ditukar',
 }
 
 export function toAppError(e: unknown): AppError {

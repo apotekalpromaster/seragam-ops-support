@@ -184,6 +184,34 @@ export async function loadDemoData(db: PGliteInterface, call: Call, onProgress?:
   if (saran.length) await mkPo(konveksi, isoToday(), saran.map((s) => [s.sku_code, Number(s.suggested_order)] as [string, number]), { catatan: 'Dari saran order' })
   await db.query(`update seragam.purchase_order set created_at = (tanggal + time '10:00') at time zone 'Asia/Jakarta' where tanggal < current_date`)
 
+  // Transaksi & retur (M4)
+  onProgress?.('Mengisi transaksi & retur contoh…')
+  // Tukar cacat: karyawan penerima batch September (dikirim 18 Sep, masih dalam 14 hari)
+  const exc = (await db.query<{ nik: string; sku_code: string; item_code: string }>(
+    `select l.nik, l.sku_code, s.item_code from seragam.ledger l join seragam.v_stock_sku s using (sku_code)
+      where l.tx_type = 'ISSUE' and l.tanggal = '2026-09-18' and s.item_code = 'KMJ' and s.available > 0 order by l.id limit 2`)).rows
+  if (exc[0]) {
+    await call('fn_exchange_create', { nik: exc[0].nik, item_code: 'KMJ', sku_out: exc[0].sku_code, qty: 1, alasan: 'CACAT_PRODUKSI',
+      approver: 'Rina Kusuma — Admin Ops Support', catatan: 'Jahitan ketiak lepas, foto dari APA', tanggal: '2026-09-22' })
+  }
+  // Pembelian potong gaji
+  const buyers = (await db.query<{ nik: string; gender: string }>(`select nik, gender from seragam.employee where status = 'AKTIF' order by nik limit 3`)).rows
+  const per = isoToday().slice(0, 7)
+  await call('fn_sale_create', { nik: buyers[0].nik, tanggal: '2026-09-15', periode_potong: per, catatan: 'Tambahan polo', lines: [{ sku_code: 'POLO-U-L', qty: 1 }] })
+  await call('fn_sale_create', { nik: buyers[1].nik, tanggal: '2026-09-19', periode_potong: per, catatan: 'Pengganti kemeja robek',
+    lines: [{ sku_code: `KMJ-${buyers[1].gender}-L`, qty: 1 }] })
+  // Resign: sebagian sudah kembali, lalu di-QC
+  const resigned = (await db.query<{ nik: string }>(`select nik from seragam.v_return_employee where sumber = 'RESIGN' and sisa > 0 order by nik`)).rows
+  if (resigned[0]) {
+    const ob = (await db.query<{ item_code: string; sisa: number }>('select item_code, sisa from seragam.v_return_obligation where nik = $1', [resigned[0].nik])).rows
+    await call('fn_return_receive', { nik: resigned[0].nik, tanggal: '2026-09-10', catatan: 'Dititipkan ke APA, dikirim ekspedisi',
+      lines: ob.map((o, i) => ({ item_code: o.item_code, qty: i === 0 ? o.sisa : 0 })) })
+    const lots = (await db.query<{ lot_id: number; sisa: number }>('select lot_id, sisa from seragam.v_karantina_lot where nik = $1', [resigned[0].nik])).rows
+    for (const l of lots) await call('fn_qc', { tanggal: '2026-09-12', lines: [{ lot_id: l.lot_id, a: l.sisa - 1, c: 1 }] })
+  }
+  // Joiner batal join setelah paket dikirim (di demo langsung diubah; di sistem nyata datang dari snapshot PPM)
+  await db.query(`update seragam.employee set status = 'BATAL_JOIN', updated_at = '2026-09-23' where nik = '2260901'`)
+
   // Hire mendadak setelah cutoff → menunggu batch ad-hoc
   await call('fn_hire_event', {
     nik: '2260950', nama: 'Rahma Aulia', gender: 'W', jabatan: 'Kasir', kode_cabang: branches[1].kode_cabang,

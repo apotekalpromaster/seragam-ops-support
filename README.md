@@ -13,8 +13,8 @@ Stack: React + Vite + TypeScript + Tailwind · Supabase (Postgres, Auth, RLS) ·
 | M1 — Fondasi: master & config, import PPM + diff, kartu karyawan, ledger + OPENING, stok dasar, opname | ✅ selesai |
 | M2 — Distribusi: antrian, batch cutoff/ad-hoc, reserve, shortage, pick/packing list, label, BAST, ISSUE otomatis, hire mendadak | ✅ selesai |
 | M3 — Stok & Pengadaan: saran order (AvgDemand, SS, ROP, MOQ), status Kritis/Perlu order/Aman, PO per vendor, terima parsial (IN), cetak PO | ✅ selesai |
-| M4 — Transaksi & Retur | berikutnya |
-| M5 — Monitoring & notifikasi | belum |
+| M4 — Transaksi & Retur: tukar cacat ≤14 hari, pembelian + export potong gaji, kewajiban retur (resign/PKL/batal join/no-show/mutasi), QC per asal barang, afkir, laporan | ✅ selesai |
+| M5 — Monitoring & notifikasi | berikutnya |
 
 ## Menjalankan
 
@@ -42,6 +42,7 @@ Semua objek dibuat di schema terpisah **`seragam`**, jadi tidak menyentuh tabel 
    Milestone berikutnya menambah file migration baru (mis. `20260925000001_m2_distribusi.sql`) — jalankan file baru saja,
    jangan menjalankan ulang yang lama. Migration M2 juga membuat bucket Storage privat `seragam-bast` untuk file BAST.
    M3: `20260926000001_m3_pengadaan.sql` (purchase order & perencanaan stok).
+   M4: `20260927000001_m4_transaksi_retur.sql` (tukar, pembelian, retur, QC, afkir).
 2. **Expose schema**: Settings → API → *Exposed schemas* → tambahkan `seragam`.
 3. **Admin pertama**: buat user di Authentication → Add user, lalu jalankan `supabase/bootstrap_admin.sql`
    (ganti email). Pengguna berikutnya ditambahkan dari menu **Pengguna** di aplikasi.
