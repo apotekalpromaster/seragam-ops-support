@@ -27,6 +27,7 @@ export function ExchangeModal({ initial, onClose, onBuyInstead }: {
   const [item, setItem] = useState('')
   const [alasan, setAlasan] = useState('')
   const [skuOut, setSkuOut] = useState('')
+  const [skuIn, setSkuIn] = useState('')
   const [qty, setQty] = useState('1')
   const [approver, setApprover] = useState('')
   const [catatan, setCatatan] = useState('')
@@ -36,10 +37,11 @@ export function ExchangeModal({ initial, onClose, onBuyInstead }: {
   const chk = useRpcQuery<Check>('fn_exchange_check', { nik: emp?.nik, item_code: item, tanggal }, !!emp && !!item)
   const m = useRpc<unknown, { kode: string }>('fn_exchange_create', { success: (r) => `Tukar ${r.kode} dicatat. Barang cacat masuk karantina (menunggu QC); pengganti keluar dari stok.` })
 
-  useEffect(() => { setItem(''); setSkuOut('') }, [emp?.nik])
+  useEffect(() => { setItem(''); setSkuOut(''); setSkuIn('') }, [emp?.nik])
+  useEffect(() => { setSkuIn(chk.data?.sku_in ?? '') }, [chk.data?.sku_in])
   useEffect(() => { if (items.data?.length === 1) setItem(items.data[0].item_code) }, [items.data])
   // Cacat produksi: default pengganti = ukuran yang sama
-  useEffect(() => { if (chk.data?.sku_in && (!skuOut || alasan === 'CACAT_PRODUKSI')) setSkuOut(chk.data.sku_in) }, [chk.data?.sku_in, alasan]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (skuIn && (!skuOut || alasan === 'CACAT_PRODUKSI')) setSkuOut(skuIn) }, [skuIn, alasan]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const skuOpts = useMemo(() => (skus.data ?? []).filter((s) => !emp || s.gender === 'U' || s.gender === emp.gender), [skus.data, emp])
   const out = skuOpts.find((s) => s.sku_code === skuOut)
@@ -56,7 +58,7 @@ export function ExchangeModal({ initial, onClose, onBuyInstead }: {
       footer={<>
         <Button onClick={onClose}>Batal</Button>
         <Button variant="primary" loading={m.isPending} disabled={!ready}
-          onClick={async () => { try { await m.mutateAsync({ nik: emp!.nik, item_code: item, sku_in: chk.data?.sku_in, sku_out: skuOut, qty: q, alasan, approver, catatan, tanggal }); onClose() } catch { /* toast */ } }}>
+          onClick={async () => { try { await m.mutateAsync({ nik: emp!.nik, item_code: item, sku_in: skuIn || chk.data?.sku_in, sku_out: skuOut, qty: q, alasan, approver, catatan, tanggal }); onClose() } catch { /* toast */ } }}>
           Simpan tukar
         </Button>
       </>}>
@@ -98,10 +100,15 @@ export function ExchangeModal({ initial, onClose, onBuyInstead }: {
               </Callout>
             ) : alasan && (
               <>
+                <Field label="Barang yang dikembalikan (cacat)" htmlFor="ex-in" hint="Masuk karantina untuk di-QC. Default: barang terakhir yang diterima karyawan.">
+                  <Select id="ex-in" value={skuIn} onChange={(e) => setSkuIn(e.target.value)}>
+                    {skuOpts.map((s) => <option key={s.sku_code} value={s.sku_code}>{s.label}{s.sku_code === chk.data!.sku_in ? ' (terakhir diterima)' : ''}</option>)}
+                  </Select>
+                </Field>
                 <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
                   <Field label="Barang pengganti" required htmlFor="ex-out" error={stokErr ?? undefined}
-                    hint={chk.data.sku_in ? `Barang yang dikembalikan: ${chk.data.sku_in} (masuk karantina)` : undefined}>
-                    <Select id="ex-out" value={skuOut} onChange={(e) => setSkuOut(e.target.value)} disabled={alasan === 'CACAT_PRODUKSI' && !!chk.data.sku_in && skuOpts.some((s) => s.sku_code === chk.data!.sku_in)}>
+                    hint={alasan === 'CACAT_PRODUKSI' ? 'Cacat produksi: pengganti ukuran sama.' : undefined}>
+                    <Select id="ex-out" value={skuOut} onChange={(e) => setSkuOut(e.target.value)} disabled={alasan === 'CACAT_PRODUKSI' && !!skuIn && skuOpts.some((s) => s.sku_code === skuIn)}>
                       <option value="">— pilih SKU —</option>
                       {skuOpts.map((s) => <option key={s.sku_code} value={s.sku_code} disabled={s.available <= 0}>{s.label} — tersedia {s.available}</option>)}
                     </Select>

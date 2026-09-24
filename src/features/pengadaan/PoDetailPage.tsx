@@ -12,12 +12,8 @@ import { useRpc, useView } from '../../lib/api'
 import { usePerm } from '../../lib/auth'
 import { fmtDate, fmtDateTime, fmtNum, fmtRp, isoToday } from '../../lib/format'
 import { PO_STATUS_LABEL } from '../../lib/labels'
-import type { PoRow } from './PengadaanPage'
+import type { PoLine, PoRow } from './planning'
 
-export interface PoLine {
-  po_id: number; po_kode: string; sku_code: string; sku_label: string; item_sort: number; gender: string; size_order: number; moq: number
-  qty_order: number; qty_received: number; sisa: number; harga: number | null; nilai: number | null; saran: number | null
-}
 interface Receipt {
   id: number; po_id: number; tanggal: string; no_surat_jalan: string | null; catatan: string | null; created_by_nama: string | null; created_at: string
   pcs: number; lines: { sku_code: string; label: string; qty: number; dikoreksi: boolean }[]

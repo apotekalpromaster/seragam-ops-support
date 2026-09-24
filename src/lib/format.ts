@@ -53,9 +53,9 @@ export function fmtPct(n: number | null | undefined, digits = 1) {
   return n === null || n === undefined || !Number.isFinite(n) ? '—' : `${n.toFixed(digits).replace('.', ',')}%`
 }
 
+/** Tanggal hari ini menurut WIB (sama dengan seragam.today() di server), apa pun zona waktu perangkat. */
 export function isoToday() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 }
 
 export function isoDate(d: Date) {

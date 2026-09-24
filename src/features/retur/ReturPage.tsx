@@ -154,6 +154,11 @@ export function ReturnModal({ emp, onClose }: { emp: ReturEmp; onClose: () => vo
   const [tgl, setTgl] = useState(isoToday())
   const [catatan, setCatatan] = useState('')
   const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(openItems.map((i) => [i.item_code, String(i.sisa)])))
+  // Ukuran fisik yang kembali bisa berbeda (mis. sudah pernah tukar ukuran): default = barang terakhir yang diterima karyawan
+  const [sku, setSku] = useState<Record<string, string>>(() => Object.fromEntries(openItems.map((i) => [i.item_code, i.sku_code ?? ''])))
+  const skus = useView<{ sku_code: string; item_code: string; gender: string; label: string }>('v_sku',
+    { columns: 'sku_code,item_code,gender,label,item_sort,size_order', filters: [['item_code', 'in', openItems.map((i) => i.item_code)], ['active', 'eq', true]], order: [['gender', 'asc'], ['size_order', 'asc']] })
+  const genderOf = (code: string | null) => skus.data?.find((s) => s.sku_code === code)?.gender
   const [wo, setWo] = useState<ReturItem | null>(null)
   const m = useRpc<unknown, { kode: string; pcs: number }>('fn_return_receive', { success: (r) => `${r.kode}: ${r.pcs} pcs diterima dan masuk karantina (menunggu QC).` })
   const errOf = (i: ReturItem) => {
@@ -171,7 +176,7 @@ export function ReturnModal({ emp, onClose }: { emp: ReturEmp; onClose: () => vo
         <span className="mr-auto text-sm text-muted">Diterima <b className="text-ink">{fmtNum(total)} pcs</b></span>
         <Button onClick={onClose}>Batal</Button>
         <Button variant="primary" icon={<Undo2 className="size-4" />} loading={m.isPending} disabled={total === 0 || openItems.some(errOf)}
-          onClick={async () => { try { await m.mutateAsync({ nik: emp.nik, tanggal: tgl, catatan, lines: openItems.map((i) => ({ item_code: i.item_code, sku_code: i.sku_code, qty: Number(qty[i.item_code] || 0) })) }); onClose() } catch { /* toast */ } }}>
+          onClick={async () => { try { await m.mutateAsync({ nik: emp.nik, tanggal: tgl, catatan, lines: openItems.map((i) => ({ item_code: i.item_code, sku_code: sku[i.item_code] || i.sku_code, qty: Number(qty[i.item_code] || 0) })) }); onClose() } catch { /* toast */ } }}>
           Simpan pengembalian
         </Button>
       </>}>
@@ -185,7 +190,16 @@ export function ReturnModal({ emp, onClose }: { emp: ReturEmp; onClose: () => vo
               const err = errOf(i)
               return (
                 <tr key={i.item_code} className="border-t border-line align-top">
-                  <td className="py-2"><p className="font-semibold">{i.item_nama}</p><p className="text-xs text-muted">{i.sku_label ?? '—'}</p></td>
+                  <td className="py-2 pr-2">
+                    <p className="font-semibold">{i.item_nama}</p>
+                    <Select aria-label={`Ukuran ${i.item_nama} yang kembali`} className="mt-1 h-8 text-xs" value={sku[i.item_code] ?? ''}
+                      onChange={(e) => setSku((s) => ({ ...s, [i.item_code]: e.target.value }))}>
+                      {!sku[i.item_code] && <option value="">— pilih ukuran —</option>}
+                      {(skus.data ?? []).filter((s) => s.item_code === i.item_code && (!genderOf(i.sku_code) || s.gender === genderOf(i.sku_code))).map((s) => (
+                        <option key={s.sku_code} value={s.sku_code}>{s.label}{s.sku_code === i.sku_code ? ' (terakhir diterima)' : ''}</option>
+                      ))}
+                    </Select>
+                  </td>
                   <td className="py-2 text-right num">{i.wajib}</td>
                   <td className="py-2 text-right num">{i.dikembalikan + i.dihapuskan}</td>
                   <td className="py-2 text-right font-semibold num">{i.sisa}</td>

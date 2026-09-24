@@ -5,7 +5,7 @@ import { Modal } from '../../components/dialog'
 import { Button, Callout, Field, Input, Select, Textarea } from '../../components/ui'
 import { useRpc, useView } from '../../lib/api'
 import { fmtNum, fmtRp, isoDate, isoToday } from '../../lib/format'
-import { sisaSaran, type PlanRow } from './PengadaanPage'
+import { sisaSaran, type PlanRow } from './planning'
 
 interface Vendor { id: number; nama: string; lead_time_default: number; active: boolean }
 interface Line { sku_code: string; label: string; moq: number; saran: number; qty: string; harga: number | null; lead: number; draft: number }

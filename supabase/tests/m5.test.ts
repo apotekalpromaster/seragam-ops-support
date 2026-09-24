@@ -1,6 +1,6 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { freshDb, rpc, select, service } from './harness'
+import { as, freshDb, rpc, select, service } from './harness'
 
 let db: PGlite
 
@@ -67,6 +67,10 @@ describe('APA / Branch Manager (PRD §3)', () => {
 
     await expectError(rpc(db, 'apa', 'fn_batch_receive', { batch_id: batchId, kode_cabang: 'JKT02', bast_path: 'x' }), 'AKSES_DITOLAK')
     await expectError(rpc(db, 'apa', 'fn_batch_receive', { batch_id: batchId }), 'BAST')
+    const boleh = async (name: string) => (await as<{ ok: boolean }>(db, 'apa', 'select seragam.apa_boleh_unggah($1) as ok', [name]))[0].ok
+    expect(await boleh(`batch-${batchId}/JKT01-1.jpg`)).toBe(true)
+    expect(await boleh(`batch-${batchId}/JKT02-1.jpg`)).toBe(false) // cabang lain
+    expect(await boleh(`batch-${batchId + 99}/JKT01-1.jpg`)).toBe(false) // batch yang tidak memuat cabangnya
     const r = await rpc(db, 'apa', 'fn_batch_receive', { batch_id: batchId, bast_path: `batch-${batchId}/JKT01-1.jpg` })
     expect(r.cabang_belum).toBe(1)
     await expectError(rpc(db, 'apa', 'fn_batch_receive', { batch_id: batchId, bast_path: 'y' }), 'sudah dikonfirmasi')

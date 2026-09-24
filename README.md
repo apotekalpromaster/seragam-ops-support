@@ -44,6 +44,7 @@ Semua objek dibuat di schema terpisah **`seragam`**, jadi tidak menyentuh tabel 
    M3: `20260926000001_m3_pengadaan.sql` (purchase order & perencanaan stok).
    M4: `20260927000001_m4_transaksi_retur.sql` (tukar, pembelian, retur, QC, afkir).
    M5: `20260928000001_m5_monitoring.sql` (APA per cabang, KPI, email harian). Email harian butuh setup terpisah: `docs/SETUP-email-harian.md`.
+   Perbaikan code review: `20260929000001_perbaikan_review.sql` (hak akses fungsi, zona waktu WIB, retur & QC).
    Muncul error *already exists* (mis. `relation "exchange" already exists`)? Artinya file itu sudah pernah berhasil dijalankan;
    SQL Editor menjalankan satu file sebagai satu transaksi, jadi percobaan yang gagal tidak mengubah apa pun. Lanjut ke file berikutnya.
 2. **Expose schema**: Settings → API → *Exposed schemas* → tambahkan `seragam`.
