@@ -1,40 +1,44 @@
 import { Loader2, ShieldAlert } from 'lucide-react'
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
-import { Button } from './components/ui'
-import ApaApp from './features/apa/ApaApp'
-import AuditPage from './features/audit/AuditPage'
-import AntrianPage from './features/batch/AntrianPage'
-import BatchDetailPage from './features/batch/BatchDetailPage'
-import BatchListPage from './features/batch/BatchListPage'
-import PrintPage from './features/batch/PrintPage'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { Button, LoadingBlock } from './components/ui'
 import LoginPage from './features/auth/LoginPage'
-import EmployeesPage from './features/employee/EmployeesPage'
-import GuidePage from './features/help/GuidePage'
-import ImportPage from './features/import/ImportPage'
-import BranchesPage from './features/master/BranchesPage'
-import ConfigPage from './features/master/ConfigPage'
-import ItemsPage from './features/master/ItemsPage'
-import OverridesPage from './features/master/OverridesPage'
-import PackagesPage from './features/master/PackagesPage'
-import PositionsPage from './features/master/PositionsPage'
-import PricesPage from './features/master/PricesPage'
-import SizesPage from './features/master/SizesPage'
-import UsersPage from './features/master/UsersPage'
-import MigrationPage from './features/migrasi/MigrationPage'
-import NotifikasiPage from './features/master/NotifikasiPage'
-import OpnamePage from './features/opname/OpnamePage'
-import OverviewPage from './features/overview/OverviewPage'
-import PengadaanPage from './features/pengadaan/PengadaanPage'
-import LaporanPage from './features/laporan/LaporanPage'
-import QcPage from './features/qc/QcPage'
-import ReturPage from './features/retur/ReturPage'
-import TransaksiPage from './features/transaksi/TransaksiPage'
-import PoDetailPage from './features/pengadaan/PoDetailPage'
-import PoPrintPage from './features/pengadaan/PoPrintPage'
-import StockPage from './features/stock/StockPage'
 import { DbProvider } from './lib/api'
 import { useAuth } from './lib/auth'
+
+// Halaman dimuat saat dibuka (APA di HP tidak perlu mengunduh seluruh dashboard admin)
+const ApaApp = lazy(() => import('./features/apa/ApaApp'))
+const AuditPage = lazy(() => import('./features/audit/AuditPage'))
+const AntrianPage = lazy(() => import('./features/batch/AntrianPage'))
+const BatchDetailPage = lazy(() => import('./features/batch/BatchDetailPage'))
+const BatchListPage = lazy(() => import('./features/batch/BatchListPage'))
+const PrintPage = lazy(() => import('./features/batch/PrintPage'))
+const EmployeesPage = lazy(() => import('./features/employee/EmployeesPage'))
+const GuidePage = lazy(() => import('./features/help/GuidePage'))
+const ImportPage = lazy(() => import('./features/import/ImportPage'))
+const BranchesPage = lazy(() => import('./features/master/BranchesPage'))
+const ConfigPage = lazy(() => import('./features/master/ConfigPage'))
+const ItemsPage = lazy(() => import('./features/master/ItemsPage'))
+const OverridesPage = lazy(() => import('./features/master/OverridesPage'))
+const PackagesPage = lazy(() => import('./features/master/PackagesPage'))
+const PositionsPage = lazy(() => import('./features/master/PositionsPage'))
+const PricesPage = lazy(() => import('./features/master/PricesPage'))
+const SizesPage = lazy(() => import('./features/master/SizesPage'))
+const UsersPage = lazy(() => import('./features/master/UsersPage'))
+const MigrationPage = lazy(() => import('./features/migrasi/MigrationPage'))
+const NotifikasiPage = lazy(() => import('./features/master/NotifikasiPage'))
+const OpnamePage = lazy(() => import('./features/opname/OpnamePage'))
+const OverviewPage = lazy(() => import('./features/overview/OverviewPage'))
+const PengadaanPage = lazy(() => import('./features/pengadaan/PengadaanPage'))
+const LaporanPage = lazy(() => import('./features/laporan/LaporanPage'))
+const QcPage = lazy(() => import('./features/qc/QcPage'))
+const ReturPage = lazy(() => import('./features/retur/ReturPage'))
+const TransaksiPage = lazy(() => import('./features/transaksi/TransaksiPage'))
+const PoDetailPage = lazy(() => import('./features/pengadaan/PoDetailPage'))
+const PoPrintPage = lazy(() => import('./features/pengadaan/PoPrintPage'))
+const StockPage = lazy(() => import('./features/stock/StockPage'))
 
 export default function App() {
   const { db, me, loading, loadingMsg, signOut } = useAuth()
@@ -50,6 +54,8 @@ export default function App() {
 
   return (
     <DbProvider db={db}>
+      <ErrorBoundary>
+      <Suspense fallback={<LoadingBlock />}>
       {!me ? (
         <LoginPage />
       ) : !me.role ? (
@@ -102,6 +108,8 @@ export default function App() {
           </Route>
         </Routes>
       )}
+      </Suspense>
+      </ErrorBoundary>
     </DbProvider>
   )
 }

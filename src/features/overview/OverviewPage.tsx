@@ -3,8 +3,9 @@ import { AlertTriangle, ArrowRight, Boxes, CalendarClock, CheckCircle2, FileUp, 
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { KpiMonth } from '../../lib/kpi'
+import { useSetupStatus } from '../migrasi/setup'
 import { Page } from '../../components/AppShell'
-import { Button, Card, Chip, InfoTip, Skeleton } from '../../components/ui'
+import { Button, Callout, Card, Chip, InfoTip, Skeleton } from '../../components/ui'
 import { useView } from '../../lib/api'
 import { usePerm } from '../../lib/auth'
 import { fmtDate, fmtDateTime, fmtMonthShort, fmtNum, fmtPct } from '../../lib/format'
@@ -45,6 +46,7 @@ export default function OverviewPage() {
   const returPct = kr && kr.dikembalikan + kr.sisa + kr.dihapuskan > 0 ? (kr.dikembalikan / (kr.dikembalikan + kr.sisa + kr.dihapuskan)) * 100 : null
   const noshowPct = sum(km.data, 'joiner_dikirim') ? (sum(km.data, 'joiner_noshow') / sum(km.data, 'joiner_dikirim')) * 100 : null
   const akurasiPct = sum(km.data, 'opname_stok_sistem') ? (1 - sum(km.data, 'opname_selisih') / sum(km.data, 'opname_stok_sistem')) * 100 : null
+  const setup = useSetupStatus()
   const { isAdmin } = usePerm()
   const nav = useNavigate()
   const k = kpi.data?.[0]
@@ -59,6 +61,21 @@ export default function OverviewPage() {
       help="beranda"
       actions={isAdmin && <Button variant="primary" icon={<FileUp className="size-4" />} onClick={() => nav('/import')}>Import Data PPM</Button>}
     >
+      {setup && (setup.cabang === 0 || setup.mapping === 0 || setup.karyawan === 0 || !setup.opening) && (
+        <Callout tone="brand" title="Persiapan sebelum dipakai"
+          action={isAdmin && <Link to="/migrasi"><Button variant="primary">Buka Migrasi Data Awal</Button></Link>}>
+          {isAdmin ? (
+            <>Data awal belum lengkap, jadi angka di bawah belum bermakna. Ikuti urutan di Migrasi Data Awal:{' '}
+              <b className={setup.harga ? 'text-emerald-700' : ''}>1 harga{setup.harga ? ' ✓' : ''}</b> →{' '}
+              <b className={setup.cabang ? 'text-emerald-700' : ''}>2 cabang{setup.cabang ? ' ✓' : ''}</b> →{' '}
+              <b className={setup.mapping ? 'text-emerald-700' : ''}>3 mapping jabatan{setup.mapping ? ' ✓' : ''}</b> →{' '}
+              <b className={setup.karyawan ? 'text-emerald-700' : ''}>4 import PPM{setup.karyawan ? ' ✓' : ''}</b> →{' '}
+              <b className={setup.opening ? 'text-emerald-700' : ''}>5 stok awal{setup.opening ? ' ✓' : ''}</b>.
+              Import PPM sebelum cabang & mapping siap akan banyak ditolak.</>
+          ) : 'Admin Ops Support sedang menyiapkan data awal. Angka di dashboard belum lengkap sampai persiapan selesai.'}
+        </Callout>
+      )}
+
       {/* KPI */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard

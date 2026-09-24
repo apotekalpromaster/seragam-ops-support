@@ -4,7 +4,7 @@ import {
   BookOpen, Boxes, CalendarDays, ClipboardCheck, Clock, Database, FileClock, FileUp, Home, LogOut, Menu, Package,
   RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck, ShoppingCart, Repeat, Undo2, ShieldCheck, BarChart3, Mail,
 } from 'lucide-react'
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, Suspense, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useView } from '../lib/api'
 import { useAuth, usePerm } from '../lib/auth'
@@ -13,6 +13,8 @@ import { fmtDate, fmtDateLong, isoDate } from '../lib/format'
 import { ROLE_LABEL } from '../lib/labels'
 import { useSchedule } from '../lib/schedule'
 import { ConfirmDialog } from './dialog'
+import { ErrorBoundary } from './ErrorBoundary'
+import { LoadingBlock } from './ui'
 
 interface NavItem { to: string; label: string; icon: ReactNode; badge?: number | string; badgeTone?: 'red' | 'amber' | 'brand'; adminOnly?: boolean }
 
@@ -189,7 +191,9 @@ export function AppShell() {
       )}
       <div className="flex min-w-0 flex-1 flex-col">
         <MenuButtonContext.Provider value={() => setOpen(true)}>
-          <Outlet />
+          <ErrorBoundary resetKey={loc.pathname}>
+            <Suspense fallback={<div className="p-6"><LoadingBlock /></div>}><Outlet /></Suspense>
+          </ErrorBoundary>
         </MenuButtonContext.Provider>
       </div>
     </div>

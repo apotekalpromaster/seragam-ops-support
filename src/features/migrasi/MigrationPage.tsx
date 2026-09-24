@@ -6,28 +6,18 @@ import { toast } from 'sonner'
 import { Page } from '../../components/AppShell'
 import { Modal } from '../../components/dialog'
 import { Button, Callout, Card } from '../../components/ui'
-import { useRpc, useView } from '../../lib/api'
+import { useRpc } from '../../lib/api'
+import { usePerm } from '../../lib/auth'
+import { ReadOnlyNote } from '../master/common'
+import { useSetupStatus } from './setup'
 import { fmtNum } from '../../lib/format'
 import { BRANCH_TEMPLATE, CHART_TEMPLATE, HISTORY_TEMPLATE, MAPPING_TEMPLATE, OPNAME_TEMPLATE, PPM_TEMPLATE, PRICE_TEMPLATE } from '../../lib/templates'
 import { downloadTemplate, readSheet, type TemplateSpec } from '../../lib/xlsx'
 
 
-interface Counts { cabang: number; harga: number; mapping: number; karyawan: number; opening: boolean; riwayat: number; chart: number }
-
-function useCounts(): Counts | null {
-  const b = useView<{ kode_cabang: string }>('branch', { columns: 'kode_cabang' })
-  const p = useView<{ sku_code: string }>('v_sku_price_current', { columns: 'sku_code' })
-  const m = useView<{ jabatan: string }>('position_map', { columns: 'jabatan' })
-  const e = useView<{ nik: string }>('employee', { columns: 'nik' })
-  const o = useView<{ id: number }>('ledger', { columns: 'id', filters: [['tx_type', 'eq', 'OPENING']], limit: 1 })
-  const r = useView<{ id: number }>('ledger', { columns: 'id', filters: [['affects_stock', 'is', false]] })
-  const c = useView<{ item_code: string }>('size_chart', { columns: 'item_code' })
-  if (!b.data || !p.data || !m.data || !e.data || !o.data || !r.data || !c.data) return null
-  return { cabang: b.data.length, harga: p.data.length, mapping: m.data.length, karyawan: e.data.length, opening: o.data.length > 0, riwayat: r.data.length, chart: c.data.length }
-}
-
 export default function MigrationPage() {
-  const c = useCounts()
+  const c = useSetupStatus()
+  const { isAdmin } = usePerm()
   const [errors, setErrors] = useState<{ title: string; list: { baris: number; pesan: string }[] } | null>(null)
   const steps: { n: number; title: string; desc: string; tpl: TemplateSpec; done?: boolean; status: string; action: ReactNode }[] = [
     { n: 1, title: 'Price list, vendor, lead time, MOQ', desc: 'Harga per SKU dan vendornya.', tpl: PRICE_TEMPLATE, done: !!c && c.harga > 0, status: c ? `${c.harga} SKU berharga` : '…',
@@ -35,18 +25,19 @@ export default function MigrationPage() {
     { n: 2, title: 'Daftar cabang & area', desc: 'Termasuk jadwal Grand Opening cabang baru.', tpl: BRANCH_TEMPLATE, done: !!c && c.cabang > 0, status: c ? `${c.cabang} cabang` : '…',
       action: <Link to="/master/cabang"><Button size="sm">Buka Cabang</Button></Link> },
     { n: 3, title: 'Mapping jabatan → paket', desc: 'Satu jabatan satu paket.', tpl: MAPPING_TEMPLATE, done: !!c && c.mapping > 0, status: c ? `${c.mapping} jabatan` : '…',
-      action: <UploadButton label="Upload mapping" fn="fn_mapping_bulk" onErrors={(l) => setErrors({ title: 'Mapping jabatan', list: l })} /> },
+      action: isAdmin && <UploadButton label="Upload mapping" fn="fn_mapping_bulk" onErrors={(l) => setErrors({ title: 'Mapping jabatan', list: l })} /> },
     { n: 4, title: 'Snapshot karyawan dari PPM', desc: 'Karyawan aktif terbaru, termasuk ukuran bila ada.', tpl: PPM_TEMPLATE, done: !!c && c.karyawan > 0, status: c ? `${fmtNum(c.karyawan)} karyawan` : '…',
       action: <Link to="/import"><Button size="sm">Buka Import PPM</Button></Link> },
     { n: 5, title: 'Stok awal (stock opname)', desc: 'Hasil hitung fisik per SKU → saldo awal.', tpl: OPNAME_TEMPLATE, done: !!c && c.opening, status: c ? (c.opening ? 'Saldo awal terbentuk' : 'Belum') : '…',
       action: <Link to="/opname"><Button size="sm">Buka Stock Opname</Button></Link> },
     { n: 6, title: 'Riwayat distribusi lama', desc: 'Seragam yang sudah diterima sebelum sistem. Mengurangi outstanding, tidak mengubah stok.', tpl: HISTORY_TEMPLATE, done: !!c && c.riwayat > 0, status: c ? `${fmtNum(c.riwayat)} baris` : '…',
-      action: <UploadButton label="Upload riwayat" fn="fn_issue_history_import" onErrors={(l) => setErrors({ title: 'Riwayat distribusi', list: l })} /> },
+      action: isAdmin && <UploadButton label="Upload riwayat" fn="fn_issue_history_import" onErrors={(l) => setErrors({ title: 'Riwayat distribusi', list: l })} /> },
     { n: 7, title: 'Size chart vendor', desc: 'Ukuran badan (cm) per item & gender.', tpl: CHART_TEMPLATE, done: !!c && c.chart > 0, status: c ? `${c.chart} ukuran` : '…',
-      action: <UploadButton label="Upload size chart" fn="fn_size_chart_save" onErrors={(l) => setErrors({ title: 'Size chart', list: l })} /> },
+      action: isAdmin && <UploadButton label="Upload size chart" fn="fn_size_chart_save" onErrors={(l) => setErrors({ title: 'Size chart', list: l })} /> },
   ]
   return (
     <Page title="Migrasi Data Awal" subtitle="Pindahkan data dari spreadsheet lama — ikuti urutan 1 sampai 7" help="migrasi">
+      {!isAdmin && <ReadOnlyNote />}
       <Callout tone="brand" title="Urutan penting">Cabang dan mapping harus ada sebelum import karyawan; karyawan harus ada sebelum riwayat distribusi. Setiap template berisi sheet <b>Petunjuk</b>.</Callout>
       <Card bodyClass="p-0">
         <ol className="divide-y divide-slate-100">

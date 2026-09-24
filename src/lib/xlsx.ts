@@ -1,7 +1,9 @@
-import * as XLSX from 'xlsx'
+// SheetJS (±400 KB) dimuat hanya saat dibutuhkan (export/import), tidak di muatan awal halaman.
+const loadXlsx = () => import('xlsx')
 
 /** Baca sheet pertama (atau sheet bernama) menjadi array objek per baris header. */
 export async function readSheet(file: File, sheetName?: string) {
+  const XLSX = await loadXlsx()
   const buf = await file.arrayBuffer()
   const wb = XLSX.read(buf, { cellDates: true, dense: true })
   const name = sheetName && wb.SheetNames.includes(sheetName) ? sheetName : wb.SheetNames[0]
@@ -42,7 +44,8 @@ export interface ExportColumn<T> {
   value: (row: T) => string | number | null | undefined
 }
 
-export function exportXlsx<T>(fileName: string, rows: T[], columns: ExportColumn<T>[], sheet = 'Data') {
+export async function exportXlsx<T>(fileName: string, rows: T[], columns: ExportColumn<T>[], sheet = 'Data') {
+  const XLSX = await loadXlsx()
   const data = [columns.map((c) => c.header), ...rows.map((r) => columns.map((c) => c.value(r) ?? ''))]
   const ws = XLSX.utils.aoa_to_sheet(data)
   ws['!cols'] = columns.map((c) => ({ wch: Math.max(10, Math.min(40, c.header.length + 4)) }))
@@ -59,7 +62,8 @@ export interface TemplateSpec {
 }
 
 /** Template import: sheet data (header + 1 contoh) dan sheet Petunjuk. */
-export function downloadTemplate(t: TemplateSpec) {
+export async function downloadTemplate(t: TemplateSpec) {
+  const XLSX = await loadXlsx()
   const wb = XLSX.utils.book_new()
   const data = XLSX.utils.aoa_to_sheet([t.columns.map((c) => c.key), t.columns.map((c) => c.contoh)])
   data['!cols'] = t.columns.map((c) => ({ wch: Math.max(14, c.key.length + 4) }))
