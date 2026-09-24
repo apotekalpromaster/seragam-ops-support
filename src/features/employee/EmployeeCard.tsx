@@ -6,12 +6,13 @@ import { Button, Callout, Chip, Field, Input, LoadingBlock, Select } from '../..
 import { useRpc, useView } from '../../lib/api'
 import { usePerm } from '../../lib/auth'
 import { fmtDate } from '../../lib/format'
-import { DIFF_LABEL, EMP_STATUS_LABEL, GENDER_LABEL, TX_LABEL } from '../../lib/labels'
+import { DIFF_LABEL, EMP_STATUS_LABEL, GENDER_LABEL, PENYERAHAN_LABEL, TX_LABEL } from '../../lib/labels'
 import type { EmployeeRow } from './EmployeesPage'
 
 interface ItemRow { item_code: string; item_nama: string; item_sort: number; entitlement: number; issued_net: number; outstanding: number; over_issued: number; sku_target: string | null; size_code: string | null; size_status: string | null; last_issue_date: string | null }
 interface LedgerRow { id: number; tanggal: string; tx_type: string; sku_label: string; qty: number; reason: string | null; ref_doc: string | null; affects_stock: boolean }
 interface DiffRow { id: number; change_type: string; old_value: string | null; new_value: string | null; import_id: number }
+interface ShipRow { id: number; batch_id: number; batch_kode: string; sku_label: string; qty: number; penyerahan: string; shipped_at: string | null; received_at: string | null; cabang_nama: string }
 interface OverrideRow { package_code: string; alasan: string; created_by_nama: string | null; created_at: string }
 
 export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => void }) {
@@ -20,6 +21,7 @@ export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => voi
   const ledger = useView<LedgerRow>('v_ledger', { filters: [['nik', 'eq', nik]], order: [['tanggal', 'desc'], ['id', 'desc']] })
   const diffs = useView<DiffRow>('v_import_diff', { filters: [['nik', 'eq', nik]], order: [['id', 'desc']] })
   const ovr = useView<OverrideRow>('v_override', { filters: [['nik', 'eq', nik]] })
+  const ships = useView<ShipRow>('v_batch_line', { filters: [['nik', 'eq', nik]], order: [['batch_id', 'desc']] })
   const { canWrite, isAdmin } = usePerm()
   const [editSize, setEditSize] = useState(false)
   const e = emp.data?.[0]
@@ -95,6 +97,25 @@ export function EmployeeCard({ nik, onClose }: { nik: string; onClose: () => voi
                   </tbody>
                 </table>
               </div>
+            )}
+          </Section>
+
+          <Section title="Pengiriman (batch)">
+            {!ships.data?.length ? <p className="text-sm text-muted">Belum pernah masuk batch distribusi.</p> : (
+              <ul className="space-y-2">
+                {ships.data.map((l) => (
+                  <li key={l.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-white px-3 py-2 text-sm">
+                    <div>
+                      <p className="font-medium">{l.sku_label} × {l.qty}</p>
+                      <p className="text-xs text-muted">
+                        <Link to={`/batch/${l.batch_id}`} className="font-semibold text-brand-600 hover:underline">{l.batch_kode}</Link> · {l.cabang_nama}
+                        {l.shipped_at ? ` · dikirim ${fmtDate(l.shipped_at)}` : ''}{l.received_at ? ` · diterima ${fmtDate(l.received_at)}` : ''}
+                      </p>
+                    </div>
+                    <Chip tone={l.penyerahan === 'DITERIMA' ? 'green' : l.penyerahan === 'DITAHAN_APA' ? 'violet' : l.penyerahan === 'DIKIRIM' ? 'blue' : 'slate'}>{PENYERAHAN_LABEL[l.penyerahan]}</Chip>
+                  </li>
+                ))}
+              </ul>
             )}
           </Section>
 

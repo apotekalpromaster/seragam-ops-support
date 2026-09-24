@@ -18,6 +18,10 @@ export interface Db {
   mode: 'supabase' | 'demo'
   select<T>(view: string, opts?: SelectOpts): Promise<T[]>
   rpc<T>(fn: string, p?: unknown): Promise<T>
+  /** Simpan file (mis. foto/scan BAST) di bucket privat. */
+  uploadFile(bucket: string, path: string, file: File): Promise<void>
+  /** URL sementara untuk membuka file privat. */
+  fileUrl(bucket: string, path: string): Promise<string>
 }
 
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -57,6 +61,15 @@ export function supabaseDb(client: SupabaseClient): Db {
       const { data, error } = await client.schema('seragam').rpc(ident(fn), { p })
       if (error) throw new Error(error.message)
       return data as T
+    },
+    async uploadFile(bucket, path, file) {
+      const { error } = await client.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type })
+      if (error) throw new Error(`UPLOAD: ${error.message}`)
+    },
+    async fileUrl(bucket, path) {
+      const { data, error } = await client.storage.from(bucket).createSignedUrl(path, 300)
+      if (error || !data) throw new Error('TIDAK_DITEMUKAN: File tidak bisa dibuka.')
+      return data.signedUrl
     },
   }
 }

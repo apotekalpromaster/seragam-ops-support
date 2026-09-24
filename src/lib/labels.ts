@@ -69,3 +69,14 @@ export const AKSI_LABEL: Record<string, string> = { INSERT: 'Tambah', UPDATE: 'U
 export const OPNAME_STATUS_LABEL: Record<string, string> = {
   DRAFT: 'Draft', SUBMITTED: 'Menunggu approval', APPROVED: 'Disetujui', DIBATALKAN: 'Dibatalkan',
 }
+
+export const BATCH_STATUS_LABEL: Record<string, string> = {
+  DRAFT: 'Draft', PICKING: 'Picking', PACKED: 'Packed', SHIPPED: 'Dikirim', SELESAI: 'Selesai', DIBATALKAN: 'Dibatalkan',
+}
+export const BATCH_JENIS_LABEL: Record<string, string> = { REGULER: 'Reguler (cutoff)', ADHOC: 'Ad-hoc', CABANG_BARU: 'Cabang baru' }
+export const CAKUPAN_LABEL: Record<string, string> = {
+  SEMUA: 'Semua antrian', HIRE_MENDADAK: 'Hire mendadak', CABANG: 'Cabang tertentu', KARYAWAN: 'Karyawan terpilih', CABANG_BARU: 'Cabang baru (GO)',
+}
+export const PENYERAHAN_LABEL: Record<string, string> = {
+  DISIAPKAN: 'Disiapkan di gudang', DIKIRIM: 'Dalam pengiriman', DITAHAN_APA: 'Ditahan APA (belum join)', DITERIMA: 'Diterima cabang', DIBATALKAN: 'Batch dibatalkan',
+}

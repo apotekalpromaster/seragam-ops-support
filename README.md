@@ -11,8 +11,9 @@ Stack: React + Vite + TypeScript + Tailwind · Supabase (Postgres, Auth, RLS) ·
 | Milestone | Status |
 |---|---|
 | M1 — Fondasi: master & config, import PPM + diff, kartu karyawan, ledger + OPENING, stok dasar, opname | ✅ selesai |
-| M2 — Distribusi: antrian, batch cutoff, reserve, pick/packing list, label, BAST, ISSUE otomatis | berikutnya |
-| M3 — Stok & Pengadaan · M4 — Transaksi & Retur · M5 — Monitoring & notifikasi | belum |
+| M2 — Distribusi: antrian, batch cutoff/ad-hoc, reserve, shortage, pick/packing list, label, BAST, ISSUE otomatis, hire mendadak | ✅ selesai |
+| M3 — Stok & Pengadaan | berikutnya |
+| M4 — Transaksi & Retur · M5 — Monitoring & notifikasi | belum |
 
 ## Menjalankan
 
@@ -21,7 +22,13 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Tanpa `.env`, aplikasi berjalan dalam **mode demo**: Postgres (PGlite) berjalan di browser dengan migration
+Untuk mencoba **mode demo** walau `.env` sudah terisi:
+
+```bash
+npm run dev:demo     # http://localhost:5176, memakai .env.demo (koneksi Supabase dikosongkan)
+```
+
+Tanpa `.env`, aplikasi juga berjalan dalam **mode demo**: Postgres (PGlite) berjalan di browser dengan migration
 yang sama persis dengan Supabase (termasuk RLS & RPC) dan data contoh. Pilih peran Admin / Staf / Viewer di layar login.
 Data demo tersimpan di IndexedDB browser tersebut saja.
 
@@ -31,6 +38,8 @@ Semua objek dibuat di schema terpisah **`seragam`**, jadi tidak menyentuh tabel 
 
 1. **Jalankan migration** berurutan di SQL Editor (atau `supabase db push`):
    `supabase/migrations/20260924000001_schema.sql` … `20260924000006_rls_grants.sql`, lalu `supabase/seed.sql`.
+   Milestone berikutnya menambah file migration baru (mis. `20260925000001_m2_distribusi.sql`) — jalankan file baru saja,
+   jangan menjalankan ulang yang lama. Migration M2 juga membuat bucket Storage privat `seragam-bast` untuk file BAST.
 2. **Expose schema**: Settings → API → *Exposed schemas* → tambahkan `seragam`.
 3. **Admin pertama**: buat user di Authentication → Add user, lalu jalankan `supabase/bootstrap_admin.sql`
    (ganti email). Pengguna berikutnya ditambahkan dari menu **Pengguna** di aplikasi.

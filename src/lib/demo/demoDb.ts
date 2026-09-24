@@ -40,16 +40,31 @@ export function setDemoUser(id: string | null) {
   userId = id
 }
 
-async function open(onProgress?: (msg: string) => void): Promise<PGliteInterface> {
+let opening: Promise<PGliteInterface> | null = null
+
+// Satu promise bersama: React StrictMode (dev) memanggil efek dua kali; tanpa ini migration
+// bisa berjalan ganda pada database yang sama.
+function open(onProgress?: (msg: string) => void): Promise<PGliteInterface> {
   const version = schemaVersion()
-  if (current?.version === version) return current.db
+  if (current?.version === version) return Promise.resolve(current.db)
+  opening ??= init(version, onProgress).finally(() => { opening = null })
+  return opening
+}
+
+async function init(version: string, onProgress?: (msg: string) => void): Promise<PGliteInterface> {
   const dataDir = `idb://seragam-demo-${version}`
   const db = await PGliteWorker.create(
     new Worker(new URL('./pglite.worker.ts', import.meta.url), { type: 'module' }),
     { dataDir },
   )
-  const exists = (await db.query<{ ok: boolean }>(`select to_regclass('seragam.config') is not null as ok`)).rows[0].ok
-  if (!exists) {
+  const st = (await db.query<{ ready: boolean; partial: boolean }>(
+    `select to_regclass('demo_store.ready') is not null as ready, to_regnamespace('seragam') is not null as partial`)).rows[0]
+  if (!st.ready) {
+    if (st.partial) {
+      // Inisialisasi sebelumnya terputus: buang dan mulai ulang dari kosong.
+      onProgress?.('Memperbaiki database demo…')
+      await db.exec('drop schema if exists seragam cascade; drop schema if exists auth cascade; drop schema if exists demo_store cascade;')
+    }
     onProgress?.('Membuat struktur database…')
     await db.exec(stubSql)
     for (const k of Object.keys(migrations).sort()) await db.exec(migrations[k])
@@ -60,6 +75,7 @@ async function open(onProgress?: (msg: string) => void): Promise<PGliteInterface
     }
     onProgress?.('Mengisi data contoh…')
     await loadDemoData(db, (fn, p) => call(db, DEMO_USERS[0].id, fn, p), onProgress)
+    await db.exec('create table demo_store.ready (at timestamptz default now())')
   }
   current = { db, version }
   return db
@@ -89,6 +105,15 @@ export async function createDemoDb(onProgress?: (msg: string) => void): Promise<
     async rpc<T>(fn: string, p?: unknown) {
       if (!/^[a-z_][a-z0-9_]*$/.test(fn)) throw new Error('Nama fungsi tidak valid')
       return call<T>(db, userId ?? '', fn, p)
+    },
+    async uploadFile(bucket, path, file) {
+      const data = new Uint8Array(await file.arrayBuffer())
+      await db.query('insert into demo_store.files (path, mime, data) values ($1, $2, $3)', [`${bucket}/${path}`, file.type, data])
+    },
+    async fileUrl(bucket, path) {
+      const r = await db.query<{ mime: string; data: Uint8Array }>('select mime, data from demo_store.files where path = $1', [`${bucket}/${path}`])
+      if (!r.rows[0]) throw new Error('TIDAK_DITEMUKAN: File tidak ditemukan.')
+      return URL.createObjectURL(new Blob([r.rows[0].data as BlobPart], { type: r.rows[0].mime }))
     },
   }
 }

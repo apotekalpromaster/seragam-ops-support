@@ -16,6 +16,9 @@ interface Kpi {
 interface Alert { kode: string; level: 'KRITIS' | 'PERINGATAN' | 'INFO'; judul: string; detail: string; jumlah: number; link: string }
 interface ImportMonth { periode: string; tepat_waktu: boolean; ada_import: boolean }
 interface ImportLog { id: number; file_name: string; committed_at: string; n_new: number; n_resign: number; n_mutasi: number; n_error: number; status: string; total_rows: number }
+interface BatchMonth { periode: string; batch_dikirim: number; tepat_waktu: number }
+interface JoinerMonth { periode: string; joiner: number; tiba_sebelum_join: number; late_hire: number }
+interface Ship { nik: string; penyerahan: string; batch_kode: string }
 interface Joiner { nik: string; nama: string; jabatan: string; cabang_nama: string; planned_join_date: string; outstanding_total: number; size_problem: boolean; jabatan_unmapped: boolean }
 
 export default function OverviewPage() {
@@ -24,6 +27,14 @@ export default function OverviewPage() {
   const months = useView<ImportMonth>('v_kpi_import_monthly', { order: [['periode', 'asc']] })
   const lastImport = useView<ImportLog>('v_import_log', { filters: [['status', 'eq', 'COMMITTED']], order: [['committed_at', 'desc']], limit: 1 })
   const joiners = useView<Joiner>('v_employee_list', { filters: [['status', 'eq', 'OFFERING']], order: [['planned_join_date', 'asc']] })
+  const bm = useView<BatchMonth>('v_kpi_batch_monthly', { order: [['periode', 'asc']] })
+  const jm = useView<JoinerMonth>('v_kpi_joiner_monthly', { order: [['periode', 'asc']] })
+  const ships = useView<Ship>('v_batch_line', { columns: 'nik,penyerahan,batch_kode', filters: [['employee_status', 'eq', 'OFFERING'], ['penyerahan', 'neq', 'DIBATALKAN']] })
+  const shipOf = (nik: string) => ships.data?.find((x) => x.nik === nik)
+  const sum = <T,>(rows: T[] | undefined, k: keyof T) => (rows ?? []).reduce((a, r) => a + Number(r[k] ?? 0), 0)
+  const batchPct = sum(bm.data, 'batch_dikirim') ? (sum(bm.data, 'tepat_waktu') / sum(bm.data, 'batch_dikirim')) * 100 : null
+  const tibaPct = sum(jm.data, 'joiner') ? (sum(jm.data, 'tiba_sebelum_join') / sum(jm.data, 'joiner')) * 100 : null
+  const latePct = sum(jm.data, 'joiner') ? (sum(jm.data, 'late_hire') / sum(jm.data, 'joiner')) * 100 : null
   const { isAdmin } = usePerm()
   const nav = useNavigate()
   const k = kpi.data?.[0]
@@ -149,6 +160,17 @@ export default function OverviewPage() {
         </Card>
       </div>
 
+      <Card title="KPI distribusi" subtitle="6 bulan terakhir" bodyClass="grid gap-4 p-5 md:grid-cols-3">
+        <MiniKpi label="Ketepatan batch" tip="% batch yang berstatus dikirim paling lambat tanggal deadline kirim." value={fmtPct(batchPct, 0)}
+          sub={`${sum(bm.data, 'tepat_waktu')} dari ${sum(bm.data, 'batch_dikirim')} batch`} target="100%" ok={batchPct === null ? undefined : batchPct === 100}
+          bars={bm.data?.map((m) => ({ key: m.periode, label: fmtMonthShort(m.periode).split(' ')[0], v: m.batch_dikirim ? m.tepat_waktu / m.batch_dikirim : null }))} />
+        <MiniKpi label="Seragam tiba sebelum join" tip="% joiner yang paketnya sudah diterima cabang paling lambat tanggal join." value={fmtPct(tibaPct, 0)}
+          sub={`${sum(jm.data, 'tiba_sebelum_join')} dari ${sum(jm.data, 'joiner')} joiner`} target="≥ 95%" ok={tibaPct === null ? undefined : tibaPct >= 95}
+          bars={jm.data?.map((m) => ({ key: m.periode, label: fmtMonthShort(m.periode).split(' ')[0], v: m.joiner ? m.tiba_sebelum_join / m.joiner : null }))} />
+        <MiniKpi label="Joiner di luar data forward" tip="% joiner yang tercatat sebagai hire mendadak (tidak muncul di data PPM sebelum join)." value={fmtPct(latePct, 0)}
+          sub={`${sum(jm.data, 'late_hire')} dari ${sum(jm.data, 'joiner')} joiner`} target="≤ 10%" ok={latePct === null ? undefined : latePct <= 10} />
+      </Card>
+
       <Card title="Joiner akan datang" subtitle="Status OFFERING dari data PPM. Paket dikirim pada batch cutoff pertama di mana nama muncul." bodyClass="p-0"
         actions={<Link to="/karyawan?status=OFFERING" className="text-sm font-semibold text-brand-600 hover:underline">Lihat semua</Link>}>
         {joiners.isLoading ? <div className="p-5"><Skeleton className="h-24" /></div> : !joiners.data?.length ? (
@@ -167,9 +189,17 @@ export default function OverviewPage() {
                     <td className="px-5 py-3">{j.cabang_nama}</td>
                     <td className="px-5 py-3 num">{fmtDate(j.planned_join_date)}</td>
                     <td className="px-5 py-3">
-                      {j.jabatan_unmapped ? <Chip tone="amber">Jabatan belum dimapping</Chip>
-                        : j.size_problem ? <Chip tone="amber">Ukuran belum lengkap</Chip>
-                        : <Chip tone="green"><UserPlus className="size-3" /> Siap masuk batch ({j.outstanding_total} pcs)</Chip>}
+                      {(() => {
+                        const sh = shipOf(j.nik)
+                        if (sh && j.outstanding_total > 0) return <Chip tone="amber">Sebagian {sh.penyerahan === 'DITAHAN_APA' ? 'di cabang' : 'dalam proses'} · sisa {j.outstanding_total} pcs</Chip>
+                        if (sh?.penyerahan === 'DITAHAN_APA') return <Chip tone="green">Sudah di cabang (ditahan APA)</Chip>
+                        if (sh?.penyerahan === 'DIKIRIM') return <Chip tone="blue">Dalam pengiriman ({sh.batch_kode})</Chip>
+                        if (sh?.penyerahan === 'DISIAPKAN') return <Chip tone="blue">Masuk batch {sh.batch_kode}</Chip>
+                        if (j.jabatan_unmapped) return <Chip tone="amber">Jabatan belum dimapping</Chip>
+                        if (j.size_problem) return <Chip tone="amber">Ukuran belum lengkap</Chip>
+                        if (j.outstanding_total > 0) return <Chip tone="brand"><UserPlus className="size-3" /> Siap masuk batch ({j.outstanding_total} pcs)</Chip>
+                        return <Chip tone="green">Lengkap</Chip>
+                      })()}
                     </td>
                   </tr>
                 ))}
@@ -180,7 +210,7 @@ export default function OverviewPage() {
       </Card>
 
       <p className="text-xs text-muted">
-        KPI lain di PRD (tiba sebelum join, no-show, tingkat tukar, return rate resign, akurasi stok, ketepatan batch) aktif setelah modul Distribusi, Stok & Pengadaan, dan Transaksi & Retur selesai dibangun.
+        KPI no-show, tingkat tukar, return rate resign, dan akurasi stok aktif setelah modul Stok & Pengadaan serta Transaksi & Retur selesai dibangun.
       </p>
     </Page>
   )
@@ -219,6 +249,36 @@ function KpiCard({ label, value, sub, target, ok, icon, tone, tip, loading, foot
         <button onClick={onClick} className="mt-3 inline-flex items-center gap-1 self-start text-xs font-semibold text-brand-600 hover:underline">
           Lihat detail <ArrowRight className="size-3" />
         </button>
+      )}
+    </div>
+  )
+}
+
+function MiniKpi({ label, tip, value, sub, target, ok, bars }: {
+  label: string; tip: string; value: string; sub: string; target: string; ok?: boolean
+  bars?: { key: string; label: string; v: number | null }[]
+}) {
+  return (
+    <div className="rounded-xl border border-line p-4">
+      <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-slate-500">{label} <InfoTip>{tip}</InfoTip></p>
+      <p className="mt-1 text-2xl font-extrabold num">{value}</p>
+      <p className="text-sm text-muted">{sub}</p>
+      <p className="mt-1 text-xs"><span className="text-muted">Target {target}</span>
+        {ok === true && <span className="ml-2 font-semibold text-emerald-600">✓ tercapai</span>}
+        {ok === false && <span className="ml-2 font-semibold text-red-600">belum tercapai</span>}
+        {ok === undefined && <span className="ml-2 text-muted">belum ada data</span>}
+      </p>
+      {bars && (
+        <div className="mt-3 flex items-end gap-1.5">
+          {bars.map((b) => (
+            <div key={b.key} className="flex flex-1 flex-col items-center gap-1" title={b.v === null ? `${b.label}: tidak ada data` : `${b.label}: ${Math.round(b.v * 100)}%`}>
+              <div className="flex h-8 w-full items-end rounded bg-slate-100">
+                {b.v !== null && <div className={clsx('w-full rounded', b.v >= 0.95 ? 'bg-emerald-400' : b.v >= 0.8 ? 'bg-amber-400' : 'bg-red-400')} style={{ height: `${Math.max(8, b.v * 100)}%` }} />}
+              </div>
+              <span className="text-[10px] text-muted">{b.label}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

@@ -3,6 +3,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { Button } from './components/ui'
 import AuditPage from './features/audit/AuditPage'
+import AntrianPage from './features/batch/AntrianPage'
+import BatchDetailPage from './features/batch/BatchDetailPage'
+import BatchListPage from './features/batch/BatchListPage'
+import PrintPage from './features/batch/PrintPage'
 import LoginPage from './features/auth/LoginPage'
 import EmployeesPage from './features/employee/EmployeesPage'
 import GuidePage from './features/help/GuidePage'
@@ -52,9 +56,13 @@ export default function App() {
         </div>
       ) : (
         <Routes>
+          <Route path="cetak/batch/:id/:doc" element={<PrintPage />} />
           <Route element={<AppShell />}>
             <Route index element={<OverviewPage />} />
             <Route path="import" element={<ImportPage />} />
+            <Route path="antrian" element={<AntrianPage />} />
+            <Route path="batch" element={<BatchListPage />} />
+            <Route path="batch/:id" element={<BatchDetailPage />} />
             <Route path="karyawan" element={<EmployeesPage />} />
             <Route path="stok" element={<StockPage />} />
             <Route path="opname" element={<OpnamePage />} />

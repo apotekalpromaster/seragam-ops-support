@@ -148,6 +148,24 @@ export async function loadDemoData(db: PGliteInterface, call: Call, onProgress?:
   await call('fn_opname_submit', { opname_id: op.id })
   await call('fn_opname_approve', { opname_id: op.id })
 
+  // Batch reguler September: dibuat setelah cutoff, dikirim sebelum deadline, sebagian cabang sudah terima
+  onProgress?.('Membuat batch distribusi contoh…')
+  const bt = await call('fn_batch_create', { jenis: 'REGULER', periode: '2026-09-01', catatan: 'Batch reguler cutoff 5 Sep' })
+  await db.query(`update seragam.batch set created_at = '2026-09-06 09:00+07' where id = $1`, [bt.id])
+  await call('fn_batch_set_status', { batch_id: bt.id, status: 'PICKING' })
+  await call('fn_batch_set_status', { batch_id: bt.id, status: 'PACKED' })
+  await call('fn_batch_set_status', { batch_id: bt.id, status: 'SHIPPED', tanggal: '2026-09-18' })
+  const cab = (await db.query<{ kode_cabang: string }>('select kode_cabang from seragam.batch_branch where batch_id = $1 order by kode_cabang', [bt.id])).rows
+  for (const c of cab.slice(0, Math.ceil(cab.length * 0.7))) {
+    await call('fn_batch_receive', { batch_id: bt.id, kode_cabang: c.kode_cabang, tanggal: '2026-09-22' })
+  }
+
+  // Hire mendadak setelah cutoff → menunggu batch ad-hoc
+  await call('fn_hire_event', {
+    nik: '2260950', nama: 'Rahma Aulia', gender: 'W', jabatan: 'Kasir', kode_cabang: branches[1].kode_cabang,
+    planned_join_date: '2026-09-30', status_karyawan: 'PROBATION', size_kemeja: 'M', size_polo: 'M',
+  })
+
   // Satu contoh riwayat perubahan paket
   await call('fn_package_new_version', {
     package_code: 'GA-A', items: { KMJ: 1, POLO: 3 }, scope: 'KARYAWAN_BARU', effective_date: '2026-09-01',

@@ -2,14 +2,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import {
   BookOpen, Boxes, CalendarDays, ClipboardCheck, Clock, Database, FileClock, FileUp, Home, LogOut, Menu, Package,
-  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle,
+  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck,
 } from 'lucide-react'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useView } from '../lib/api'
 import { useAuth, usePerm } from '../lib/auth'
 import { IS_DEMO } from '../lib/db'
-import { fmtDate, fmtDateLong } from '../lib/format'
+import { fmtDate, fmtDateLong, isoDate } from '../lib/format'
 import { ROLE_LABEL } from '../lib/labels'
 import { useSchedule } from '../lib/schedule'
 import { ConfirmDialog } from './dialog'
@@ -19,6 +19,8 @@ interface NavItem { to: string; label: string; icon: ReactNode; badge?: number |
 function useNav(): { group: string; items: NavItem[] }[] {
   const { data: alerts } = useView<{ kode: string; level: string; jumlah: number }>('v_alert')
   const { data: opname } = useView<{ status: string }>('v_opname', { filters: [['status', 'eq', 'SUBMITTED']] })
+  const { data: batches } = useView<{ status: string; terlambat: boolean }>('v_batch', { columns: 'status,terlambat', filters: [['status', 'in', ['DRAFT', 'PICKING', 'PACKED', 'SHIPPED']]] })
+  const lateBatch = batches?.filter((b) => b.terlambat && b.status !== 'SHIPPED').length ?? 0
   const a = (k: string) => alerts?.find((x) => x.kode === k)?.jumlah
   const kritis = alerts?.filter((x) => x.level === 'KRITIS').length
   return [
@@ -27,7 +29,9 @@ function useNav(): { group: string; items: NavItem[] }[] {
       items: [
         { to: '/', label: 'Beranda', icon: <Home />, badge: kritis || undefined, badgeTone: 'red' },
         { to: '/import', label: 'Import Data PPM', icon: <FileUp />, badge: a('IMPORT_TERLAMBAT') ? '!' : undefined, badgeTone: 'red', adminOnly: true },
-        { to: '/karyawan', label: 'Karyawan', icon: <Users />, badge: (a('UKURAN_KOSONG') ?? 0) + (a('UKURAN_TIDAK_TERSEDIA') ?? 0) || undefined, badgeTone: 'amber' },
+        { to: '/antrian', label: 'Antrian Alokasi', icon: <ListTodo />, badge: (a('UKURAN_KOSONG') ?? 0) + (a('UKURAN_TIDAK_TERSEDIA') ?? 0) || undefined, badgeTone: 'amber' },
+        { to: '/batch', label: 'Batch Distribusi', icon: <Truck />, badge: lateBatch || batches?.length || undefined, badgeTone: lateBatch ? 'red' : 'brand' },
+        { to: '/karyawan', label: 'Karyawan', icon: <Users /> },
         { to: '/stok', label: 'Stok', icon: <Boxes /> },
         { to: '/opname', label: 'Stock Opname', icon: <ClipboardCheck />, badge: opname?.length || undefined, badgeTone: 'brand' },
       ],
@@ -63,6 +67,18 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { isAdmin } = usePerm()
   const s = useSchedule()
   const [confirmOut, setConfirmOut] = useState(false)
+  // Status batch reguler periode aktif menentukan warna deadline.
+  const regQ = useView<{ status: string; shipped_at: string | null }>('v_batch', {
+    columns: 'status,shipped_at', filters: [['jenis', 'eq', 'REGULER'], ['periode', 'eq', isoDate(new Date(s.periodStart.getFullYear(), s.periodStart.getMonth(), 1))], ['status', 'neq', 'DIBATALKAN']],
+  })
+  const regB = regQ.data?.[0]
+  const reg = regQ.isLoading
+    ? { text: s.daysToDeadline < 0 ? `lewat ${-s.daysToDeadline} hari` : `${s.daysToDeadline} hari lagi`, late: false }
+    : regB && ['SHIPPED', 'SELESAI'].includes(regB.status)
+    ? { text: `batch dikirim ${fmtDate(regB.shipped_at)}`, late: false }
+    : s.daysToDeadline < 0
+      ? { text: `${regB ? 'batch belum dikirim' : 'belum ada batch'} · lewat ${-s.daysToDeadline} hari`, late: true }
+      : { text: s.daysToDeadline === 0 ? 'hari ini' : `${s.daysToDeadline} hari lagi${regB ? '' : ' · batch belum dibuat'}`, late: false }
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-line px-5 py-5">
@@ -80,9 +96,8 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <p className="flex items-center gap-1.5 font-semibold"><CalendarDays className="size-3.5" /> Cutoff berikutnya</p>
           <p className="mt-0.5 num">{fmtDate(s.nextCutoff)} · <b>{s.daysToCutoff === 0 ? 'hari ini' : `${s.daysToCutoff} hari lagi`}</b></p>
           <p className="mt-2 flex items-center gap-1.5 font-semibold"><Clock className="size-3.5" /> Deadline kirim periode {s.periodLabel}</p>
-          {/* Status terlambat (merah) baru relevan setelah modul batch (M2) mengetahui apakah batch sudah SHIPPED. */}
-          <p className="mt-0.5 num">
-            {fmtDate(s.deadline)} · <b>{s.daysToDeadline < 0 ? `sudah lewat ${-s.daysToDeadline} hari` : s.daysToDeadline === 0 ? 'hari ini' : `${s.daysToDeadline} hari lagi`}</b>
+          <p className={clsx('mt-0.5 num', reg.late && 'font-semibold text-red-700')}>
+            {fmtDate(s.deadline)} · <b>{reg.text}</b>
           </p>
         </div>
       </div>

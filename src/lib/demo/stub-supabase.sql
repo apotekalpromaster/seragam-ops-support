@@ -10,3 +10,9 @@ do $$ begin create role anon nologin; exception when duplicate_object then null;
 grant usage on schema auth to authenticated, anon;
 grant select on auth.users to authenticated;
 grant execute on function auth.uid() to authenticated, anon;
+
+-- Pengganti Supabase Storage di mode demo (file BAST disimpan di database browser).
+create schema if not exists demo_store;
+create table if not exists demo_store.files (path text primary key, mime text, data bytea not null, created_at timestamptz default now());
+grant usage on schema demo_store to authenticated;
+grant select, insert on demo_store.files to authenticated;

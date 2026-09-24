@@ -29,7 +29,27 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
     ),
   },
   {
-    id: 'batch', title: 'Cara membuat batch distribusi', body: <p>Tersedia di modul Distribusi (milestone M2): antrian alokasi, batch cutoff, pick list, packing list, label, dan BAST.</p>,
+    id: 'batch', title: 'Cara membuat & mengirim batch distribusi', body: (
+      <ol className="list-decimal space-y-1.5 pl-5">
+        <li>Setelah import PPM, buka <Link to="/antrian" className="font-semibold text-brand-600">Antrian Alokasi</Link> → <b>Buat batch</b>. Pilih <b>Reguler</b> (sekali per periode cutoff), <b>Ad-hoc</b> (susulan / hire mendadak), atau <b>Cabang baru</b>.</li>
+        <li>Periksa preview: jumlah baris, pcs, cabang, dan <b>kekurangan stok</b>. Baris yang stoknya kurang tidak masuk batch dan tetap di antrian.</li>
+        <li>Setelah dibuat, stok untuk batch langsung <b>dipesan (reserved)</b> sehingga tidak dipakai batch lain.</li>
+        <li><b>Mulai picking</b> → cetak <b>Pick list</b> dan ambil barang per SKU. <b>Selesai packing</b> → kemas per karyawan, tempel <b>Label nama</b>, sertakan <b>Packing list</b> dan <b>Form BAST</b> per cabang.</li>
+        <li><b>Tandai sudah dikirim</b> (ketik KIRIM) pada tanggal barang dikirim. Sistem otomatis mencatat transaksi "Kirim ke karyawan", stok berkurang, dan hak karyawan terpenuhi.</li>
+        <li>Saat BAST bertanda tangan kembali, buka tab <b>Per cabang</b> → <b>Konfirmasi terima</b> + unggah foto/scan BAST. Batch otomatis <b>Selesai</b> bila semua cabang terkonfirmasi.</li>
+        <li>Paket joiner yang tiba sebelum tanggal join berstatus <b>Ditahan APA</b> dan diserahkan pada hari join.</li>
+      </ol>
+    ),
+  },
+  {
+    id: 'antrian', title: 'Antrian alokasi', body: (
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li><b>Siap dikirim</b>: hak yang belum dikirim dan ukurannya valid. Centang beberapa karyawan untuk membuat batch ad-hoc khusus mereka.</li>
+        <li><b>Menunggu ukuran</b>: ukuran kosong — tagih ke PPM (Export XLSX) sebelum cutoff. <b>Ukuran tidak tersedia</b>: perlu keputusan manual lewat kartu karyawan.</li>
+        <li><b>Hire mendadak</b>: joiner yang tidak ada di data PPM. Input lewat tombol <b>Input hire mendadak</b>; dikirim lewat batch ad-hoc mingguan.</li>
+        <li><b>Aging</b> = hari sejak join. Merah bila lebih dari 90 hari.</li>
+      </ul>
+    ),
   },
   {
     id: 'beranda', title: 'Membaca Beranda', body: (
