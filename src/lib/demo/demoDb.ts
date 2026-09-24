@@ -115,6 +115,9 @@ export async function createDemoDb(onProgress?: (msg: string) => void): Promise<
       if (!r.rows[0]) throw new Error('TIDAK_DITEMUKAN: File tidak ditemukan.')
       return URL.createObjectURL(new Blob([r.rows[0].data as BlobPart], { type: r.rows[0].mime }))
     },
+    async invoke() {
+      throw new Error('DEMO: Pengiriman email tidak tersedia di mode demo. Di Supabase, tombol ini mengirim email tes lewat Resend.')
+    },
   }
 }
 

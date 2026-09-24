@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import {
   BookOpen, Boxes, CalendarDays, ClipboardCheck, Clock, Database, FileClock, FileUp, Home, LogOut, Menu, Package,
-  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck, ShoppingCart, Repeat, Undo2, ShieldCheck, BarChart3,
+  RefreshCw, Ruler, Settings2, Shirt, Store, Tags, UserCog, Users, Network, UserRoundCog, X, FlaskConical, HelpCircle, ListTodo, Truck, ShoppingCart, Repeat, Undo2, ShieldCheck, BarChart3, Mail,
 } from 'lucide-react'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -58,6 +58,7 @@ function useNav(): { group: string; items: NavItem[] }[] {
         { to: '/master/ukuran', label: 'Size Curve & Chart', icon: <Ruler /> },
         { to: '/master/parameter', label: 'Parameter', icon: <Settings2 /> },
         { to: '/master/pengguna', label: 'Pengguna', icon: <UserCog />, adminOnly: true },
+        { to: '/master/notifikasi', label: 'Notifikasi Email', icon: <Mail />, adminOnly: true },
       ],
     },
     {

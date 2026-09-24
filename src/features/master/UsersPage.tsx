@@ -12,7 +12,8 @@ import { fmtDate } from '../../lib/format'
 import { ROLE_LABEL } from '../../lib/labels'
 import { ReadOnlyNote } from './common'
 
-interface U { user_id: string; email: string; nama: string; role: string; aktif: boolean; created_at: string }
+interface U { user_id: string; email: string; nama: string; role: string; aktif: boolean; created_at: string; kode_cabang: string | null }
+interface Br { kode_cabang: string; nama: string }
 
 export default function UsersPage() {
   const q = useView<U>('app_user', { order: [['nama', 'asc']] })
@@ -22,7 +23,8 @@ export default function UsersPage() {
   const columns = useMemo<ColumnDef<U>[]>(() => [
     { accessorKey: 'nama', header: 'Nama', cell: ({ row: { original: u } }) => <div><p className="font-semibold">{u.nama} {u.user_id === me?.user_id && <Chip tone="brand">Anda</Chip>}</p><p className="text-xs text-muted">{u.email}</p></div> },
     { accessorKey: 'email', header: 'Email', meta: { className: 'hidden' }, cell: () => null },
-    { accessorKey: 'role', header: 'Role', cell: (c) => ROLE_LABEL[c.getValue() as string] },
+    { accessorKey: 'role', header: 'Role', cell: ({ row: { original: u } }) => <span>{ROLE_LABEL[u.role]}{u.kode_cabang && <span className="text-xs text-muted"> · {u.kode_cabang}</span>}</span>,
+      meta: { exportValue: (u) => `${ROLE_LABEL[u.role]}${u.kode_cabang ? ` (${u.kode_cabang})` : ''}` } },
     { accessorKey: 'aktif', header: 'Status', cell: (c) => (c.getValue() ? <Chip tone="green">aktif</Chip> : <Chip tone="slate">nonaktif</Chip>) },
     { accessorKey: 'created_at', header: 'Ditambahkan', cell: (c) => fmtDate(c.getValue() as string) },
     ...(isAdmin ? [{ id: 'aksi', header: '', enableSorting: false, meta: { noExport: true },
@@ -48,13 +50,15 @@ function UserModal({ user, onClose }: { user: U | null; onClose: () => void }) {
   const [nama, setNama] = useState(user?.nama ?? '')
   const [role, setRole] = useState(user?.role ?? 'staf')
   const [aktif, setAktif] = useState(user?.aktif ?? true)
+  const [cab, setCab] = useState(user?.kode_cabang ?? '')
+  const branches = useView<Br>('branch', { order: [['nama', 'asc']] })
   const m = useRpc('fn_user_upsert', { success: 'Pengguna disimpan.' })
   return (
     <Modal open onOpenChange={(o) => !o && onClose()} title={user ? `Ubah ${user.nama}` : 'Tambah pengguna'} size="sm"
-      footer={<><Button onClick={onClose}>Batal</Button><Button variant="primary" loading={m.isPending} disabled={!email.includes('@')}
-        onClick={async () => { try { await m.mutateAsync({ email, nama, role, aktif }); onClose() } catch { /* toast */ } }}>Simpan</Button></>}>
+      footer={<><Button onClick={onClose}>Batal</Button><Button variant="primary" loading={m.isPending} disabled={!email.includes('@') || (role === 'apa' && !cab)}
+        onClick={async () => { try { await m.mutateAsync({ email, nama, role, aktif, kode_cabang: role === 'apa' ? cab : null }); onClose() } catch { /* toast */ } }}>Simpan</Button></>}>
       <div className="space-y-4">
-        {IS_DEMO && !user && <Callout tone="amber">Di mode demo hanya 3 akun contoh yang ada, jadi email baru akan ditolak.</Callout>}
+        {IS_DEMO && !user && <Callout tone="amber">Di mode demo hanya 4 akun contoh yang ada, jadi email baru akan ditolak.</Callout>}
         <Field label="Email login" required><Input type="email" value={email} disabled={!!user} onChange={(e) => setEmail(e.target.value)} /></Field>
         <Field label="Nama"><Input value={nama} onChange={(e) => setNama(e.target.value)} /></Field>
         <Field label="Role" required>
@@ -62,8 +66,17 @@ function UserModal({ user, onClose }: { user: U | null; onClose: () => void }) {
             <option value="admin">{ROLE_LABEL.admin} — semua fitur</option>
             <option value="staf">{ROLE_LABEL.staf} — transaksi & opname</option>
             <option value="viewer">{ROLE_LABEL.viewer} — lihat & export</option>
+            <option value="apa">{ROLE_LABEL.apa} — konfirmasi terima cabangnya</option>
           </Select>
         </Field>
+        {role === 'apa' && (
+          <Field label="Cabang" required hint="APA hanya melihat kiriman, paket joiner, dan retur cabang ini — tidak bisa membuka menu lain.">
+            <Select value={cab} onChange={(e) => setCab(e.target.value)}>
+              <option value="">— pilih cabang —</option>
+              {branches.data?.map((b) => <option key={b.kode_cabang} value={b.kode_cabang}>{b.nama} ({b.kode_cabang})</option>)}
+            </Select>
+          </Field>
+        )}
         {user && <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-500" checked={aktif} onChange={(e) => setAktif(e.target.checked)} /> Akun aktif</label>}
       </div>
     </Modal>

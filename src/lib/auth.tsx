@@ -9,6 +9,9 @@ export interface Me {
   email: string
   nama: string
   role: Role | null
+  /** Hanya untuk role apa: cabang yang dipegang. */
+  kode_cabang?: string | null
+  cabang_nama?: string | null
 }
 
 interface AuthState {

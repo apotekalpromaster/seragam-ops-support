@@ -89,7 +89,7 @@ function WajibTable({ q, batas }: { q: ReturnType<typeof useView<ReturEmp>>; bat
     ) },
     { accessorKey: 'aging_hari', header: () => <Term tip="Hari sejak tanggal resign / batas hadir / mutasi.">Aging</Term>, meta: { align: 'right', exportHeader: 'Aging (hari)' },
       cell: ({ row: { original: r } }) => r.aging_hari == null || r.aging_hari < 0 ? '—' : <span className={clsx('font-semibold', r.sisa > 0 && r.aging_hari > batas && 'text-red-600')}>{r.aging_hari} hr</span> },
-    { accessorKey: 'nilai', header: () => <Term tip="Sisa qty × harga price list saat ini (harga buku). Hanya informasi; aturan tagih masih TBD.">Nilai</Term>, meta: { align: 'right', exportHeader: 'Nilai outstanding' },
+    { accessorKey: 'nilai', header: () => <Term tip="Sisa qty × harga price list saat ini (sama dengan harga yang dibebankan ke karyawan). Hanya informasi; sistem tidak menagih otomatis.">Nilai</Term>, meta: { align: 'right', exportHeader: 'Nilai outstanding' },
       cell: (c) => <span className="whitespace-nowrap">{fmtRp(c.getValue() as number)}</span> },
     { accessorKey: 'status', header: 'Status', meta: { exportValue: (r) => RETUR_STATUS_LABEL[r.status] }, cell: ({ row: { original: r } }) => <Chip tone={RETUR_STATUS_TONE[r.status]}>{RETUR_STATUS_LABEL[r.status]}</Chip> },
     ...(canWrite ? [{

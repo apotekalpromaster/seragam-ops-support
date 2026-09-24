@@ -14,7 +14,7 @@ Stack: React + Vite + TypeScript + Tailwind · Supabase (Postgres, Auth, RLS) ·
 | M2 — Distribusi: antrian, batch cutoff/ad-hoc, reserve, shortage, pick/packing list, label, BAST, ISSUE otomatis, hire mendadak | ✅ selesai |
 | M3 — Stok & Pengadaan: saran order (AvgDemand, SS, ROP, MOQ), status Kritis/Perlu order/Aman, PO per vendor, terima parsial (IN), cetak PO | ✅ selesai |
 | M4 — Transaksi & Retur: tukar cacat ≤14 hari, pembelian + export potong gaji, kewajiban retur (resign/PKL/batal join/no-show/mutasi), QC per asal barang, afkir, laporan | ✅ selesai |
-| M5 — Monitoring & notifikasi | berikutnya |
+| M5 — Monitoring: 10 KPI + laporan KPI bulanan, snapshot harian, email ringkasan harian (Resend), alert konfirmasi tertunda, akun APA per cabang untuk konfirmasi terima + BAST | ✅ selesai |
 
 ## Menjalankan
 
@@ -43,6 +43,9 @@ Semua objek dibuat di schema terpisah **`seragam`**, jadi tidak menyentuh tabel 
    jangan menjalankan ulang yang lama. Migration M2 juga membuat bucket Storage privat `seragam-bast` untuk file BAST.
    M3: `20260926000001_m3_pengadaan.sql` (purchase order & perencanaan stok).
    M4: `20260927000001_m4_transaksi_retur.sql` (tukar, pembelian, retur, QC, afkir).
+   M5: `20260928000001_m5_monitoring.sql` (APA per cabang, KPI, email harian). Email harian butuh setup terpisah: `docs/SETUP-email-harian.md`.
+   Muncul error *already exists* (mis. `relation "exchange" already exists`)? Artinya file itu sudah pernah berhasil dijalankan;
+   SQL Editor menjalankan satu file sebagai satu transaksi, jadi percobaan yang gagal tidak mengubah apa pun. Lanjut ke file berikutnya.
 2. **Expose schema**: Settings → API → *Exposed schemas* → tambahkan `seragam`.
 3. **Admin pertama**: buat user di Authentication → Add user, lalu jalankan `supabase/bootstrap_admin.sql`
    (ganti email). Pengguna berikutnya ditambahkan dari menu **Pengguna** di aplikasi.

@@ -25,6 +25,8 @@ const TITLES: Record<string, string> = {
   KOSONG: 'Tidak ada yang bisa diproses',
   UPLOAD: 'Upload gagal',
   TUKAR_DITOLAK: 'Tidak bisa ditukar',
+  DEMO: 'Tidak tersedia di mode demo',
+  FUNGSI_TIDAK_ADA: 'Fungsi email belum dipasang',
 }
 
 export function toAppError(e: unknown): AppError {

@@ -60,7 +60,7 @@ function ExchangeTable({ onNew }: { onNew?: () => void }) {
     { accessorKey: 'alasan', header: 'Alasan', meta: { exportValue: (r) => EXCHANGE_ALASAN_LABEL[r.alasan] }, cell: ({ row: { original: r } }) => (
       <div className="flex flex-wrap gap-1"><Chip tone={r.alasan === 'CACAT_PRODUKSI' ? 'red' : 'amber'}>{EXCHANGE_ALASAN_LABEL[r.alasan]}</Chip>{r.dibatalkan && <Chip tone="slate">dikoreksi</Chip>}</div>
     ) },
-    { accessorKey: 'hari_sejak_issue', header: 'Hari sejak kirim', meta: { align: 'right' } },
+    { accessorKey: 'hari_sejak_issue', header: 'Hari sejak diterima', meta: { align: 'right' } },
     { accessorKey: 'vendor_nama', header: 'Vendor', cell: (c) => (c.getValue() as string) ?? '—' },
     { accessorKey: 'approver', header: 'Disetujui', cell: ({ row: { original: r } }) => <span className="text-xs">{r.approver}<br /><span className="text-muted">dicatat {r.created_by_nama ?? '—'}</span></span> },
   ], [])
@@ -69,7 +69,7 @@ function ExchangeTable({ onNew }: { onNew?: () => void }) {
       <DataTable data={q.data} columns={columns} loading={q.isLoading} error={q.error} searchKeys={['kode', 'nik', 'nama', 'sku_in']} searchPlaceholder="Cari no. / NIK / nama / SKU…"
         exportName="tukar-barang" onRowClick={(r) => setOpen(r.nik)}
         empty={<EmptyState icon={<Repeat className="size-5" />} title="Belum ada tukar barang" action={onNew && <Button onClick={onNew}>Tukar barang cacat</Button>}>
-          Tukar hanya untuk cacat produksi atau deviasi spek vendor, dalam batas hari sejak barang dikirim.
+          Tukar hanya untuk cacat produksi atau deviasi spek vendor, dalam batas hari sejak barang diterima cabang.
         </EmptyState>} />
       {open && <EmployeeCard nik={open} onClose={() => setOpen(null)} />}
     </Card>

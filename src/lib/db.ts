@@ -22,6 +22,8 @@ export interface Db {
   uploadFile(bucket: string, path: string, file: File): Promise<void>
   /** URL sementara untuk membuka file privat. */
   fileUrl(bucket: string, path: string): Promise<string>
+  /** Panggil Supabase Edge Function (mis. kirim email tes). Tidak tersedia di mode demo. */
+  invoke<T>(fn: string, body?: unknown): Promise<T>
 }
 
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -70,6 +72,16 @@ export function supabaseDb(client: SupabaseClient): Db {
       const { data, error } = await client.storage.from(bucket).createSignedUrl(path, 300)
       if (error || !data) throw new Error('TIDAK_DITEMUKAN: File tidak bisa dibuka.')
       return data.signedUrl
+    },
+    async invoke<T>(fn: string, body: unknown = {}) {
+      const { data, error } = await client.functions.invoke(fn, { body: body as Record<string, unknown> })
+      if (error) {
+        // Pesan dari fungsi (mis. "AKSES_DITOLAK: …") ada di body respons
+        const res = (error as { context?: Response }).context
+        const msg = res ? await res.json().then((j) => j.error ?? j.pesan).catch(() => null) : null
+        throw new Error(msg ?? (/not found|404/i.test(error.message) ? 'FUNGSI_TIDAK_ADA: Edge Function belum di-deploy. Lihat docs/SETUP-email-harian.md.' : error.message))
+      }
+      return data as T
     },
   }
 }

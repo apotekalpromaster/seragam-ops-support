@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { AlertTriangle, ArrowRight, Boxes, CalendarClock, CheckCircle2, FileUp, Info, PackageCheck, ShieldAlert, Shirt, UserPlus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import type { KpiMonth } from '../../lib/kpi'
 import { Page } from '../../components/AppShell'
 import { Button, Card, Chip, InfoTip, Skeleton } from '../../components/ui'
 import { useView } from '../../lib/api'
@@ -33,6 +34,7 @@ export default function OverviewPage() {
   const jm = useView<JoinerMonth>('v_kpi_joiner_monthly', { order: [['periode', 'asc']] })
   const exm = useView<ExMonth>('v_kpi_exchange_monthly', { order: [['periode', 'asc']] })
   const kr = useView<KpiReturn>('v_kpi_return').data?.[0]
+  const km = useView<KpiMonth>('v_kpi_monthly', { order: [['periode', 'asc']] })
   const ships = useView<Ship>('v_batch_line', { columns: 'nik,penyerahan,batch_kode', filters: [['employee_status', 'eq', 'OFFERING'], ['penyerahan', 'neq', 'DIBATALKAN']] })
   const shipOf = (nik: string) => ships.data?.find((x) => x.nik === nik)
   const sum = <T,>(rows: T[] | undefined, k: keyof T) => (rows ?? []).reduce((a, r) => a + Number(r[k] ?? 0), 0)
@@ -41,6 +43,8 @@ export default function OverviewPage() {
   const latePct = sum(jm.data, 'joiner') ? (sum(jm.data, 'late_hire') / sum(jm.data, 'joiner')) * 100 : null
   const tukarPct = sum(exm.data, 'issue') ? (sum(exm.data, 'tukar') / sum(exm.data, 'issue')) * 100 : null
   const returPct = kr && kr.dikembalikan + kr.sisa + kr.dihapuskan > 0 ? (kr.dikembalikan / (kr.dikembalikan + kr.sisa + kr.dihapuskan)) * 100 : null
+  const noshowPct = sum(km.data, 'joiner_dikirim') ? (sum(km.data, 'joiner_noshow') / sum(km.data, 'joiner_dikirim')) * 100 : null
+  const akurasiPct = sum(km.data, 'opname_stok_sistem') ? (1 - sum(km.data, 'opname_selisih') / sum(km.data, 'opname_stok_sistem')) * 100 : null
   const { isAdmin } = usePerm()
   const nav = useNavigate()
   const k = kpi.data?.[0]
@@ -184,13 +188,19 @@ export default function OverviewPage() {
           sub={`${sum(jm.data, 'late_hire')} dari ${sum(jm.data, 'joiner')} joiner`} target="≤ 10%" ok={latePct === null ? undefined : latePct <= 10} />
       </Card>
 
-      <Card title="KPI transaksi & retur" subtitle="Tukar 6 bulan terakhir · retur semua karyawan resign" bodyClass="grid gap-4 p-5 md:grid-cols-2"
+      <Card title="KPI stok, transaksi & retur" subtitle="6 bulan terakhir · return rate: semua karyawan resign" bodyClass="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4"
         actions={<Link to="/laporan" className="text-sm font-semibold text-brand-600 hover:underline">Laporan</Link>}>
         <MiniKpi label="Tingkat tukar" tip="Barang pengganti tukar cacat ÷ barang dikirim ke karyawan (per bulan)." value={fmtPct(tukarPct, 1)}
           sub={`${sum(exm.data, 'tukar')} tukar dari ${sum(exm.data, 'issue')} pcs dikirim`} target="< 3%" ok={tukarPct === null ? undefined : tukarPct < 3}
           bars={exm.data?.map((m) => ({ key: m.periode, label: fmtMonthShort(m.periode).split(' ')[0], v: m.issue ? m.tukar / m.issue : null }))} />
         <MiniKpi label="Return rate resign" tip="Item kembali ÷ item wajib kembali untuk karyawan resign & PKL selesai. Yang dihapuskan dihitung tidak kembali." value={fmtPct(returPct, 0)}
           sub={kr ? `${kr.dikembalikan} kembali · ${kr.sisa} belum (${kr.karyawan_belum} karyawan)` : ''} target="≥ 90%" ok={returPct === null ? undefined : returPct >= 90} />
+        <MiniKpi label="No-show" tip="Joiner yang paketnya sudah dikirim lalu batal join / tidak hadir melewati masa tunggu. Bahan evaluasi rekrutmen." value={fmtPct(noshowPct, 0)}
+          sub={`${sum(km.data, 'joiner_noshow')} dari ${sum(km.data, 'joiner_dikirim')} joiner dikirim paket`} target="dipantau"
+          bars={km.data?.map((m) => ({ key: m.periode, label: fmtMonthShort(m.periode).split(' ')[0], v: m.joiner_dikirim ? m.joiner_noshow / m.joiner_dikirim : null }))} />
+        <MiniKpi label="Akurasi stok" tip="1 − (|selisih opname| ÷ stok sistem), dari opname rutin yang disetujui (opname awal tidak dihitung)." value={fmtPct(akurasiPct, 1)}
+          sub={sum(km.data, 'opname_stok_sistem') ? `selisih ${sum(km.data, 'opname_selisih')} dari ${sum(km.data, 'opname_stok_sistem')} pcs` : 'belum ada opname rutin'} target="≥ 98%"
+          ok={akurasiPct === null ? undefined : akurasiPct >= 98} />
       </Card>
 
       <Card title="Joiner akan datang" subtitle="Status OFFERING dari data PPM. Paket dikirim pada batch cutoff pertama di mana nama muncul." bodyClass="p-0"
@@ -230,10 +240,7 @@ export default function OverviewPage() {
           </div>
         )}
       </Card>
-
-      <p className="text-xs text-muted">
-        KPI no-show dan akurasi stok (hasil opname) menyusul pada tahap monitoring, bersama tren 6 bulan untuk semua KPI.
-      </p>
+      <p className="text-xs text-muted">Semua 10 KPI per bulan ada di <Link to="/laporan" className="font-semibold text-brand-600 hover:underline">Laporan & Export → KPI bulanan</Link>.</p>
     </Page>
   )
 }

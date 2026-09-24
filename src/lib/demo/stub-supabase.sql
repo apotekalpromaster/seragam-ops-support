@@ -7,6 +7,7 @@ create or replace function auth.uid() returns uuid language sql stable as $$
 $$;
 do $$ begin create role authenticated nologin; exception when duplicate_object then null; end $$;
 do $$ begin create role anon nologin; exception when duplicate_object then null; end $$;
+do $$ begin create role service_role nologin; exception when duplicate_object then null; end $$;
 grant usage on schema auth to authenticated, anon;
 grant select on auth.users to authenticated;
 grant execute on function auth.uid() to authenticated, anon;

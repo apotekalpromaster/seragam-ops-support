@@ -9,7 +9,7 @@ import { fmtDate, isoToday } from '../../lib/format'
 
 interface ItemRow { item_code: string; item_nama: string; issued_net: number; item_sort: number }
 interface SkuRow { sku_code: string; label: string; item_code: string; gender: string; size_order: number; available: number }
-interface Check { ok: boolean; issue_date: string | null; hari: number | null; batas: number; alasan_tolak: string | null; sku_in: string | null; issued_net: number }
+interface Check { ok: boolean; acuan: 'DITERIMA' | 'DIKIRIM'; tanggal_kirim: string | null; issue_date: string | null; hari: number | null; batas: number; alasan_tolak: string | null; sku_in: string | null; issued_net: number }
 
 const ALASAN = [
   { v: 'CACAT_PRODUKSI', l: 'Cacat produksi', d: 'Jahitan lepas, noda, logo rusak, dsb. Pengganti ukuran sama.' },
@@ -52,7 +52,7 @@ export function ExchangeModal({ initial, onClose, onBuyInstead }: {
 
   return (
     <Modal open onOpenChange={(o) => !o && onClose()} size="lg" title="Tukar barang cacat"
-      description="Hanya untuk cacat produksi atau deviasi spek vendor, paling lambat sesuai batas hari sejak barang dikirim. Salah pilih ukuran = pembelian."
+      description="Hanya untuk cacat produksi atau deviasi spek vendor, paling lambat sesuai batas hari sejak barang diterima cabang. Salah pilih ukuran = pembelian."
       footer={<>
         <Button onClick={onClose}>Batal</Button>
         <Button variant="primary" loading={m.isPending} disabled={!ready}
@@ -72,7 +72,7 @@ export function ExchangeModal({ initial, onClose, onBuyInstead }: {
         )}
         {emp && item && chk.data && (
           chk.data.ok
-            ? <p className="flex items-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="size-4" /> Dikirim {fmtDate(chk.data.issue_date)} — {chk.data.hari} dari {chk.data.batas} hari batas tukar.</p>
+            ? <p className="flex items-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="size-4" /> {chk.data.acuan === 'DITERIMA' ? `Diterima cabang ${fmtDate(chk.data.issue_date)}` : `Dikirim ${fmtDate(chk.data.issue_date)} (cabang belum konfirmasi terima)`} — {chk.data.hari} dari {chk.data.batas} hari batas tukar.</p>
             : <Callout tone="red" icon={<AlertTriangle className="size-4" />} title="Tidak bisa ditukar"
                 action={<Button size="sm" icon={<ShoppingBag className="size-3.5" />} onClick={() => onBuyInstead(emp, skuOut || chk.data?.sku_in || undefined)}>Proses sebagai pembelian</Button>}>
                 {chk.data.alasan_tolak}

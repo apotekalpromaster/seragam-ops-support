@@ -10,6 +10,7 @@ const DEMO = [
   { id: '00000000-0000-0000-0000-00000000000a', nama: 'Rina Kusuma', role: 'admin', desc: 'Semua fitur: import, master & config, approval opname.' },
   { id: '00000000-0000-0000-0000-00000000000b', nama: 'Budi Santoso', role: 'staf', desc: 'Input transaksi & opname. Tidak bisa ubah master/config.' },
   { id: '00000000-0000-0000-0000-00000000000c', nama: 'Dewi Lestari', role: 'viewer', desc: 'Read-only + export (Division Lead, PPM, Finance).' },
+  { id: '00000000-0000-0000-0000-00000000000e', nama: 'Yuni Astuti', role: 'apa', desc: 'APA cabang: konfirmasi terima kiriman & unggah BAST (tampilan HP).' },
 ]
 
 export default function LoginPage() {

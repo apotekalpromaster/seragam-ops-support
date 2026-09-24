@@ -107,7 +107,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
   {
     id: 'transaksi', title: 'Tukar barang cacat & pembelian', body: (
       <ul className="list-disc space-y-1.5 pl-5">
-        <li><b>Tukar</b> hanya untuk <b>cacat produksi</b> atau <b>deviasi spek vendor</b>, paling lambat sesuai batas hari (default 14) sejak barang dikirim, dan wajib nama atasan yang menyetujui. Barang cacat masuk <i>karantina</i>, pengganti keluar dari stok layak.</li>
+        <li><b>Tukar</b> hanya untuk <b>cacat produksi</b> atau <b>deviasi spek vendor</b>, paling lambat sesuai batas hari (default 14) sejak barang <b>diterima cabang</b> (tanggal BAST; bila cabang belum konfirmasi, dari tanggal kirim), dan wajib nama atasan yang menyetujui. Barang cacat masuk <i>karantina</i>, pengganti keluar dari stok layak.</li>
         <li>Salah pilih ukuran atau lewat batas → sistem menolak dan menawarkan <b>Proses sebagai pembelian</b>.</li>
         <li><b>Pembelian</b>: harga otomatis dari price list, periode potong gaji wajib. Barang beli tidak dihitung pemenuhan hak dan tidak wajib dikembalikan saat resign.</li>
         <li>Salah input pembelian → admin klik <b>Batalkan</b>; barang kembali ke stok dan hilang dari export potong gaji.</li>
@@ -144,7 +144,28 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
         <li><b>Potong gaji</b>: pilih periode → Export XLSX → kirim ke Payroll. Pembelian yang dibatalkan tidak ikut.</li>
         <li><b>Outstanding resign</b>: sisa seragam karyawan resign/PKL beserta nilai (harga price list).</li>
         <li><b>Rekap tukar per SKU</b>: tingkat tukar 12 bulan per SKU & vendor; ≥ 3% ditandai merah.</li>
+        <li><b>KPI bulanan</b>: 10 KPI PRD per bulan (6 bulan terakhir) dengan target; merah = di bawah target. Kelengkapan & stock-out berasal dari snapshot harian yang disimpan saat email harian jalan.</li>
         <li>Semua tabel lain di aplikasi juga bisa di-export lewat tombol Export XLSX.</li>
+      </ul>
+    ),
+  },
+  {
+    id: 'apa', title: 'Konfirmasi terima oleh APA / Branch Manager', body: (
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li>Admin membuat akun APA di <Link to="/master/pengguna" className="font-semibold text-brand-600">Pengguna</Link>: role <b>APA / Branch Manager</b> + cabangnya. Akun login dibuat dulu di Supabase (Authentication → Add user).</li>
+        <li>Setelah batch dikirim, buka Batch → tab Per cabang → <b>Link APA</b>, kirim link ke APA (mis. via WhatsApp). Link tidak berisi data karyawan; APA tetap harus login.</li>
+        <li>APA hanya melihat data cabangnya: kiriman yang perlu dikonfirmasi, paket joiner yang disimpan, seragam yang harus dikembalikan, dan karyawan akan resign. Menu lain tidak bisa dibuka.</li>
+        <li>APA konfirmasi terima <b>wajib</b> dengan foto/scan BAST dan hanya sekali. Bila salah, admin membatalkan konfirmasi di detail batch.</li>
+        <li>Cabang yang belum konfirmasi lebih dari 7 hari (Parameter) muncul di alert Beranda.</li>
+      </ul>
+    ),
+  },
+  {
+    id: 'notifikasi', title: 'Email ringkasan harian', body: (
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li>Dikirim setiap pagi ke penerima di <Link to="/master/notifikasi" className="font-semibold text-brand-600">Notifikasi Email</Link> (default operation@apotekalpro.id). Isi sama dengan pratinjau di halaman itu.</li>
+        <li>Admin bisa mengubah penerima, menghentikan email, dan mengirim email tes. Setiap pengiriman (berhasil/gagal) tercatat.</li>
+        <li>Setup teknis (Resend, Edge Function, jadwal): <code>docs/SETUP-email-harian.md</code>.</li>
       </ul>
     ),
   },

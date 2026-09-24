@@ -218,6 +218,25 @@ export async function loadDemoData(db: PGliteInterface, call: Call, onProgress?:
     planned_join_date: '2026-09-30', status_karyawan: 'PROBATION', size_kemeja: 'M', size_polo: 'M',
   })
 
+  // Monitoring (M5): snapshot KPI akhir bulan sebelumnya (contoh tren) + hari ini, satu log email
+  onProgress?.('Menyiapkan data monitoring…')
+  await db.query(`
+    insert into seragam.kpi_daily (tanggal, karyawan_aktif, aktif_lengkap, sku_aktif, sku_stockout, outstanding_pcs, karantina_pcs, retur_belum_pcs)
+    select (date_trunc('month', current_date) - make_interval(months => g) + interval '1 month - 1 day')::date,
+           118 + g, 96 + (5 - g) * 5, 54, 24 - (5 - g) * 2, 60 - (5 - g) * 7, 0, 4 + g
+    from generate_series(1, 5) g on conflict do nothing`)
+  await call('fn_kpi_snapshot', {})
+  await db.query(`insert into seragam.notification_log (sent_at, pemicu, penerima, subjek, status, provider_id)
+    values (now() - interval '1 day', 'JADWAL', 'operation@apotekalpro.id', '[Seragam] contoh ringkasan kemarin', 'TERKIRIM', 'demo')`)
+  // Akun APA untuk cabang yang belum mengonfirmasi terima batch September
+  const cabApa = (await db.query<{ kode_cabang: string }>(
+    `select kode_cabang from seragam.batch_branch where received_at is null order by kode_cabang limit 1`)).rows[0]?.kode_cabang
+  if (cabApa) {
+    await db.query(`insert into auth.users (id, email) values ('00000000-0000-0000-0000-00000000000e', 'yuni@alpro.demo') on conflict do nothing`)
+    await db.query(`insert into seragam.app_user (user_id, email, nama, role, kode_cabang) values ('00000000-0000-0000-0000-00000000000e', 'yuni@alpro.demo', 'Yuni Astuti', 'apa', $1)
+      on conflict do nothing`, [cabApa])
+  }
+
   // Satu contoh riwayat perubahan paket
   await call('fn_package_new_version', {
     package_code: 'GA-A', items: { KMJ: 1, POLO: 3 }, scope: 'KARYAWAN_BARU', effective_date: '2026-09-01',

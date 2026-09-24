@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import clsx from 'clsx'
-import { ArrowLeft, CheckCircle2, FileText, Paperclip, Printer, Tag, Truck, Undo2, Upload, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, FileText, Link2, Paperclip, Printer, Tag, Truck, Undo2, Upload, XCircle } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -164,14 +164,23 @@ function BranchTab({ b, canWrite, isAdmin }: { b: BatchRow; canWrite: boolean; i
     { id: 'bast', header: 'BAST', enableSorting: false, meta: { noExport: true }, cell: ({ row: { original: r } }) => r.bast_path ? <BastLink path={r.bast_path} /> : <span className="text-xs text-slate-300">—</span> },
     { id: 'aksi', header: '', enableSorting: false, meta: { noExport: true }, cell: ({ row: { original: r } }) => (
       !shipped || !canWrite ? null : !r.received_at
-        ? <Button size="sm" variant="soft" onClick={() => setRecv(r)}>Konfirmasi terima</Button>
+        ? <div className="flex justify-end gap-1">
+            <Button size="sm" variant="ghost" icon={<Link2 className="size-3.5" />} title="Salin link konfirmasi untuk APA cabang ini"
+              onClick={async (e) => {
+                e.stopPropagation()
+                const url = `${window.location.origin}/apa?batch=${b.id}`
+                try { await navigator.clipboard.writeText(url); toast.success('Link konfirmasi disalin', { description: `Kirim ke APA ${r.cabang_nama}. APA login dengan akunnya, lalu konfirmasi terima + unggah BAST.` }) }
+                catch { toast.info(url, { description: 'Salin link ini dan kirim ke APA.' }) }
+              }}>Link APA</Button>
+            <Button size="sm" variant="soft" onClick={() => setRecv(r)}>Konfirmasi terima</Button>
+          </div>
         : isAdmin ? <Button size="sm" variant="ghost" onClick={() => setUndo(r)}>Batalkan</Button> : null
     ) },
   ], [shipped, canWrite, isAdmin])
   return (
     <Card bodyClass="p-0">
       {shipped && b.cabang_diterima < b.jumlah_cabang && (
-        <div className="border-b border-line px-5 py-3 text-sm text-muted">Catat konfirmasi setelah APA/BM mengirim BAST yang ditandatangani (foto atau PDF). Batch otomatis <b>Selesai</b> saat semua cabang terkonfirmasi.</div>
+        <div className="border-b border-line px-5 py-3 text-sm text-muted">APA mengonfirmasi sendiri lewat <b>Link APA</b> (login akun APA cabang), atau catat di sini setelah BAST bertanda tangan diterima. Batch otomatis <b>Selesai</b> saat semua cabang terkonfirmasi.</div>
       )}
       <DataTable data={q.data} columns={columns} loading={q.isLoading} searchKeys={['cabang_nama', 'kode_cabang']} searchPlaceholder="Cari cabang…" exportName={`cabang-${b.kode}`} />
       {recv && <ReceiveModal batch={b} branch={recv} onClose={() => setRecv(null)} />}

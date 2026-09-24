@@ -9,6 +9,7 @@ export const USERS = {
   staf: '00000000-0000-0000-0000-00000000000b',
   viewer: '00000000-0000-0000-0000-00000000000c',
   asing: '00000000-0000-0000-0000-00000000000d', // login tapi tidak terdaftar di app_user
+  apa: '00000000-0000-0000-0000-00000000000e', // didaftarkan per test (butuh cabang) lewat fn_user_upsert
 } as const
 export type Who = keyof typeof USERS
 
@@ -27,7 +28,7 @@ export async function freshDb() {
   await db.exec(readFileSync(join(root, 'supabase/seed.sql'), 'utf8'))
   for (const [role, id] of Object.entries(USERS)) {
     await db.query('insert into auth.users (id, email) values ($1, $2)', [id, `${role}@alpro.test`])
-    if (role !== 'asing') {
+    if (role !== 'asing' && role !== 'apa') {
       await db.query(
         'insert into seragam.app_user (user_id, email, nama, role) values ($1, $2, $3, $4)',
         [id, `${role}@alpro.test`, `User ${role}`, role],
@@ -55,4 +56,14 @@ export async function rpc<T = any>(db: PGlite, who: Who, fn: string, p: unknown 
 
 export async function select<T = any>(db: PGlite, who: Who, view: string, where = '', params: unknown[] = []) {
   return as<T>(db, who, `select * from seragam.${view} ${where}`, params)
+}
+
+/** Panggil RPC sebagai Edge Function (service role key). */
+export async function service<T = any>(db: PGlite, fn: string, p: unknown = {}) {
+  return db.transaction(async (tx) => {
+    await tx.query(`select set_config('request.jwt.claim.role', 'service_role', true)`)
+    await tx.exec('set local role service_role')
+    const res = await tx.query<{ r: T }>(`select seragam.${fn}($1::jsonb) as r`, [JSON.stringify(p)])
+    return res.rows[0].r
+  })
 }

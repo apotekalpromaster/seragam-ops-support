@@ -2,6 +2,7 @@ import { Loader2, ShieldAlert } from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { Button } from './components/ui'
+import ApaApp from './features/apa/ApaApp'
 import AuditPage from './features/audit/AuditPage'
 import AntrianPage from './features/batch/AntrianPage'
 import BatchDetailPage from './features/batch/BatchDetailPage'
@@ -21,6 +22,7 @@ import PricesPage from './features/master/PricesPage'
 import SizesPage from './features/master/SizesPage'
 import UsersPage from './features/master/UsersPage'
 import MigrationPage from './features/migrasi/MigrationPage'
+import NotifikasiPage from './features/master/NotifikasiPage'
 import OpnamePage from './features/opname/OpnamePage'
 import OverviewPage from './features/overview/OverviewPage'
 import PengadaanPage from './features/pengadaan/PengadaanPage'
@@ -61,6 +63,9 @@ export default function App() {
             <Button className="mt-5" onClick={() => void signOut()}>Keluar</Button>
           </div>
         </div>
+      ) : me.role === 'apa' ? (
+        // APA/Branch Manager: tampilan terpisah, hanya data cabangnya (lewat RPC)
+        <Routes><Route path="*" element={<ApaApp />} /></Routes>
       ) : (
         <Routes>
           <Route path="cetak/batch/:id/:doc" element={<PrintPage />} />
@@ -89,6 +94,7 @@ export default function App() {
             <Route path="master/ukuran" element={<SizesPage />} />
             <Route path="master/parameter" element={<ConfigPage />} />
             <Route path="master/pengguna" element={<UsersPage />} />
+            <Route path="master/notifikasi" element={<NotifikasiPage />} />
             <Route path="migrasi" element={<MigrationPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="panduan" element={<GuidePage />} />
