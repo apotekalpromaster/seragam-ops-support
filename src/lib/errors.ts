@@ -27,6 +27,7 @@ const TITLES: Record<string, string> = {
   TUKAR_DITOLAK: 'Tidak bisa ditukar',
   DEMO: 'Tidak tersedia di mode demo',
   FUNGSI_TIDAK_ADA: 'Fungsi email belum dipasang',
+  EMAIL_GAGAL: 'Email tidak terkirim',
 }
 
 export function toAppError(e: unknown): AppError {

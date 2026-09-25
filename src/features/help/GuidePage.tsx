@@ -165,7 +165,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
       <ul className="list-disc space-y-1.5 pl-5">
         <li>Dikirim setiap pagi ke penerima di <Link to="/master/notifikasi" className="font-semibold text-brand-600">Notifikasi Email</Link> (default operation@apotekalpro.id). Isi sama dengan pratinjau di halaman itu.</li>
         <li>Admin bisa mengubah penerima, menghentikan email, dan mengirim email tes. Setiap pengiriman (berhasil/gagal) tercatat.</li>
-        <li>Setup teknis (Resend, Edge Function, jadwal): <code>docs/SETUP-email-harian.md</code>.</li>
+        <li>Dikirim dari akun Gmail khusus (App Password). Setup teknis (Gmail, Edge Function, jadwal): <code>docs/SETUP-email-harian.md</code>.</li>
       </ul>
     ),
   },

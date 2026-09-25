@@ -25,6 +25,13 @@ const LEVEL = {
   INFO: { bg: '#F0F9FF', bar: '#0284C7', fg: '#075985', label: 'Info' },
 }
 
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Pecah isian penerima (koma/titik koma/spasi). Dipakai halaman Notifikasi & Edge Function supaya aturannya sama. */
+export function splitRecipients(s: string | null | undefined): string[] {
+  return String(s ?? '').split(/[,;\s]+/).map((t) => t.trim()).filter(Boolean)
+}
+
 export function digestSubject(d: DigestData) {
   const k = d.alerts.filter((a) => a.level === 'KRITIS').length
   const p = d.alerts.filter((a) => a.level === 'PERINGATAN').length

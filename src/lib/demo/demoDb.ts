@@ -116,7 +116,7 @@ export async function createDemoDb(onProgress?: (msg: string) => void): Promise<
       return URL.createObjectURL(new Blob([r.rows[0].data as BlobPart], { type: r.rows[0].mime }))
     },
     async invoke() {
-      throw new Error('DEMO: Pengiriman email tidak tersedia di mode demo. Di Supabase, tombol ini mengirim email tes lewat Resend.')
+      throw new Error('DEMO: Pengiriman email tidak tersedia di mode demo. Di Supabase, tombol ini mengirim email tes lewat Gmail.')
     },
   }
 }

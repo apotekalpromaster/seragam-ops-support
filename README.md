@@ -14,7 +14,7 @@ Stack: React + Vite + TypeScript + Tailwind · Supabase (Postgres, Auth, RLS) ·
 | M2 — Distribusi: antrian, batch cutoff/ad-hoc, reserve, shortage, pick/packing list, label, BAST, ISSUE otomatis, hire mendadak | ✅ selesai |
 | M3 — Stok & Pengadaan: saran order (AvgDemand, SS, ROP, MOQ), status Kritis/Perlu order/Aman, PO per vendor, terima parsial (IN), cetak PO | ✅ selesai |
 | M4 — Transaksi & Retur: tukar cacat ≤14 hari, pembelian + export potong gaji, kewajiban retur (resign/PKL/batal join/no-show/mutasi), QC per asal barang, afkir, laporan | ✅ selesai |
-| M5 — Monitoring: 10 KPI + laporan KPI bulanan, snapshot harian, email ringkasan harian (Resend), alert konfirmasi tertunda, akun APA per cabang untuk konfirmasi terima + BAST | ✅ selesai |
+| M5 — Monitoring: 10 KPI + laporan KPI bulanan, snapshot harian, email ringkasan harian (Gmail SMTP), alert konfirmasi tertunda, akun APA per cabang untuk konfirmasi terima + BAST | ✅ selesai |
 
 ## Menjalankan
 

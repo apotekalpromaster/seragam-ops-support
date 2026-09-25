@@ -11,13 +11,12 @@ import { usePerm } from '../../lib/auth'
 import { IS_DEMO } from '../../lib/db'
 import { toAppError } from '../../lib/errors'
 import { fmtDateTime } from '../../lib/format'
-import { renderDigest, type DigestData } from '../../../supabase/functions/_shared/digest'
+import { EMAIL_RE, renderDigest, splitRecipients, type DigestData } from '../../../supabase/functions/_shared/digest'
 import { ReadOnlyNote } from './common'
 
 interface Log { id: number; sent_at: string; pemicu: string; penerima: string | null; subjek: string | null; status: string; pesan: string | null }
 interface Cfg { key: string; value: unknown }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const STATUS_TONE: Record<string, 'green' | 'red' | 'slate'> = { TERKIRIM: 'green', GAGAL: 'red', DILEWATI: 'slate' }
 
 /** Email ringkasan harian (PRD M5): penerima, pratinjau, kirim tes, riwayat. */
@@ -32,7 +31,7 @@ export default function NotifikasiPage() {
   const [edit, setEdit] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const set = useRpc('fn_config_set', { success: 'Pengaturan email disimpan.' })
-  const bad = edit !== null && edit.split(/[,;\s]+/).filter(Boolean).some((e) => !EMAIL.test(e))
+  const bad = edit !== null && splitRecipients(edit).some((e) => !EMAIL_RE.test(e))
   const preview = useMemo(() => (digest.data ? renderDigest(digest.data, { appUrl: window.location.origin }) : null), [digest.data])
 
   async function sendTest() {
@@ -65,8 +64,8 @@ export default function NotifikasiPage() {
                 </Field>
                 {isAdmin && edit !== null && edit !== to && (
                   <div className="flex gap-2">
-                    <Button size="sm" variant="primary" loading={set.isPending} disabled={bad || !edit.trim()}
-                      onClick={async () => { try { await set.mutateAsync({ key: 'notif_email_to', value: edit.split(/[,;\s]+/).filter(Boolean).join(', ') }); setEdit(null) } catch { /* toast */ } }}>Simpan</Button>
+                    <Button size="sm" variant="primary" loading={set.isPending} disabled={bad || !splitRecipients(edit).length}
+                      onClick={async () => { try { await set.mutateAsync({ key: 'notif_email_to', value: splitRecipients(edit).join(', ') }); setEdit(null) } catch { /* toast */ } }}>Simpan</Button>
                     <Button size="sm" onClick={() => setEdit(null)}>Batal</Button>
                   </div>
                 )}
