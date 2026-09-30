@@ -79,38 +79,86 @@ describe('perencanaan stok (PRD §6)', () => {
     expect(p.suggested_order).toBe(0)
   })
 
-  it('AvgDemand dari histori keluar; SS, ROP, status ORDER, dan saran order', async () => {
+  /** Transaksi keluar bertanggal lampau (tanggal = ekspresi SQL relatif terhadap hari ini WIB). */
+  async function out(tx: string, sku: string, qty: number, nik: string | null, tgl: string) {
+    const r = await db.query<{ id: number }>(
+      `select seragam._ledger_insert($1::seragam.tx_type, $2, $3, 'LAYAK', $4, 'test', 'TEST', (${tgl})::date) as id`, [tx, sku, -qty, nik])
+    return Number(r.rows[0].id)
+  }
+  const past = (m: number, d = 0) => `seragam.today() - interval '${m} months' - interval '${d} days'`
+
+  it('AvgDemand hanya dari permintaan rutin: karyawan baru, tukar, beli — bukan migrasi atau tunggakan', async () => {
     await cfg('planned_hires_per_month', 0)
-    await importRows([row({ nik: 'E1' }), row({ nik: 'E2' })])
-    await stock({ 'KMJ-W-L': 8, 'POLO-U-M': 10 })
-    const b = await rpc(db, 'staf', 'fn_batch_create', { jenis: 'REGULER' })
-    await expectPipelineMatchesQueue() // batch terbuka: sudah di-reserve, bukan kebutuhan antrian lagi
-    await ship(b.id) // 4 kemeja keluar hari ini
-    await expectPipelineMatchesQueue()
-    const p = await plan('KMJ-W-L')
+    await importRows([row({ nik: 'E1' }), row({ nik: 'E2' })]) // karyawan lama (join 2025)
+    await db.query(`update seragam.employee set join_date = (${past(4, 20)})::date where nik = 'E2'`) // E2 = karyawan baru
+    await stock({ 'KMJ-W-L': 40, 'POLO-U-M': 10 })
+
+    // Tidak dihitung: riwayat migrasi & kiriman tunggakan ke karyawan lama
+    await rpc(db, 'admin', 'fn_issue_history_import', { rows: [{ nik: 'E1', item_code: 'KMJ', size: 'L', qty: 2, tanggal: '2026-08-15' }] })
+    await out('ISSUE', 'KMJ-W-L', 2, 'E1', past(0, 3))
+    let p = await plan('KMJ-W-L')
+    expect(p.demand_histori).toBe(0)
+    expect(Number(p.avg_demand)).toBe(0)
+    expect(p.demand_sumber).toBe('TIDAK_ADA')
+
+    // Dihitung: kiriman ke karyawan baru (≤ 60 hari setelah join), beli, tukar
+    await out('ISSUE', 'KMJ-W-L', 2, 'E2', past(4, 5))
+    await out('SALE', 'KMJ-W-L', 1, 'E1', past(1))
+    await out('EXC_OUT', 'KMJ-W-L', 1, 'E1', past(0, 2))
+    // Koreksi dinilai dari transaksi aslinya: kiriman rutin yang dikoreksi hilang dari histori
+    const salah = await out('ISSUE', 'KMJ-W-L', 2, 'E2', past(4, 1))
+    await rpc(db, 'admin', 'fn_ledger_reverse', { id: salah, alasan: 'salah input kiriman' })
+    p = await plan('KMJ-W-L')
+    expect(p.histori_cukup).toBe(true) // transaksi rutin pertama > 3 bulan lalu
     expect(p.demand_sumber).toBe('HISTORI')
-    expect(p.demand_histori).toBe(4)
-    expect(p.demand_bulan).toBe(1) // histori sistem baru 1 bulan
-    expect(Number(p.avg_demand)).toBe(4)
-    expect(Number(p.safety_stock)).toBe(2) // 4 × 0,5
-    expect(Number(p.rop)).toBe(6) // 4 × 30/30 + 2
-    expect(p.available).toBe(4)
-    expect(p.pipeline_demand).toBe(0)
-    expect(p.status).toBe('ORDER') // 4 + 0 ≤ 6, tetapi > SS
-    // 4 × 2 bulan + 2 + 0 − 4 − 0 = 6 → MOQ 12
-    expect(p.suggested_order).toBe(12)
+    expect(p.demand_histori).toBe(4) // 2 + 1 + 1
+    expect(p.demand_bulan).toBe(5) // histori 4 bulan 5 hari → 5 bulan
+    expect(Number(p.avg_demand)).toBe(0.8)
+    expect(Number(p.safety_stock)).toBe(0.4)
   })
 
-  it('SKU tanpa histori memakai rencana hire × qty per karyawan × size curve', async () => {
+  it('joiner sejak sistem dipakai tetap dihitung walau dikirim > 60 hari setelah join', async () => {
+    await cfg('planned_hires_per_month', 0)
+    await importRows([row({ nik: 'E1' }), row({ nik: 'E3' })])
+    await db.query(`update seragam.import_log set committed_at = (${past(6)})::timestamptz`) // go-live 6 bulan lalu
+    await db.query(`update seragam.employee set join_date = (${past(5)})::date where nik = 'E3'`)
+    await stock({ 'KMJ-W-L': 20 })
+    await out('ISSUE', 'KMJ-W-L', 2, 'E3', past(1)) // terlambat ±4 bulan (stok habis)
+    await out('ISSUE', 'KMJ-W-L', 2, 'E1', past(1)) // tunggakan karyawan sebelum go-live
+    expect((await plan('KMJ-W-L')).demand_histori).toBe(2)
+  })
+
+  it('histori < 3 bulan belum dipakai: tetap memakai rencana hire', async () => {
     await cfg('planned_hires_per_month', 10)
-    await importRows([row({ nik: 'E1' }), row({ nik: 'E2', gender: 'Pria' }), row({ nik: 'E3', size_polo: '4XL' }), row({ nik: 'E4', size_kemeja: '' })])
-    await expectPipelineMatchesQueue() // termasuk ukuran tidak tersedia / kosong yang tidak dihitung
-    const p = await plan('KMJ-W-M')
-    // qty kemeja wanita per karyawan = 6 pcs (E1, E3, E4) / 4 karyawan = 1,5; size curve wanita M = 0,30
-    expect(p.demand_sumber).toBe('SIZE_CURVE')
-    expect(Number(p.avg_demand)).toBe(4.5) // 10 × 1,5 × 0,30
-    expect(p.status).toBe('KRITIS') // available 0 ≤ SS 2,25
-    expect((await plan('BLZ-APT-W-M')).demand_sumber).toBe('TIDAK_ADA') // tidak ada paket yang berisi blazer apoteker
+    await importRows([row({ nik: 'E1', join_date: '' , status: 'OFFERING', planned_join_date: '2026-10-20' })])
+    await stock({ 'KMJ-W-L': 20 })
+    await out('ISSUE', 'KMJ-W-L', 2, 'E1', past(0, 5)) // joiner: rutin, tetapi baru beberapa hari
+    const p = await plan('KMJ-W-L')
+    expect(p.demand_histori).toBe(2)
+    expect(p.histori_cukup).toBe(false)
+    expect(p.demand_sumber).toBe('RENCANA_HIRE')
+    expect(Number(p.avg_demand)).toBe(Number(p.avg_rencana))
+  })
+
+  it('kiriman karena mutasi jabatan dihitung sebagai permintaan rutin', async () => {
+    await rpc(db, 'admin', 'fn_mapping_bulk', { rows: [{ jabatan: 'TTK', package_code: 'STD-TTK' }] })
+    await importRows([row({ nik: 'E1' })])
+    await importRows([row({ nik: 'E1', jabatan: 'TTK' })]) // mutasi Kasir → TTK
+    await stock({ 'BLZ-TTK-W-XL': 5 })
+    await out('ISSUE', 'BLZ-TTK-W-XL', 1, 'E1', 'seragam.today()')
+    expect((await plan('BLZ-TTK-W-XL')).demand_histori).toBe(1)
+  })
+
+  it('sebaran ukuran dari data karyawan bila ≥ 20 orang', async () => {
+    await cfg('planned_hires_per_month', 10)
+    await importRows(Array.from({ length: 20 }, (_, i) => row({ nik: `E${i}`, size_kemeja: i < 15 ? 'L' : 'M' })))
+    const l = await plan('KMJ-W-L')
+    // qty kemeja wanita per karyawan = 2; sebaran L = 30/40 = 0,75 → 10 × 2 × 0,75
+    expect(l.proporsi_sumber).toBe('DATA_KARYAWAN')
+    expect(Number(l.avg_rencana)).toBe(15)
+    expect(Number((await plan('KMJ-W-M')).avg_rencana)).toBe(5)
+    expect(Number((await plan('KMJ-W-S')).avg_rencana)).toBe(0) // tidak ada karyawan ukuran S
+    expect((await plan('KMJ-P-L')).proporsi_sumber).toBe('SIZE_CURVE') // belum ada data pria
   })
 
   it('alert SKU kritis muncul di beranda', async () => {

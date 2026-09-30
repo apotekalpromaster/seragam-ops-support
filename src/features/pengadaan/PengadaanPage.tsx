@@ -1,15 +1,15 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import clsx from 'clsx'
-import { ClipboardList, ShoppingCart } from 'lucide-react'
+import { ClipboardList, Info, ShoppingCart, TriangleAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Page } from '../../components/AppShell'
 import { DataTable } from '../../components/DataTable'
-import { Button, Card, Chip, EmptyState, Select, Tabs, Term } from '../../components/ui'
+import { Button, Callout, Card, Chip, EmptyState, Select, Tabs, Term } from '../../components/ui'
 import { useView } from '../../lib/api'
 import { usePerm } from '../../lib/auth'
 import { fmtDate, fmtNum, fmtRp } from '../../lib/format'
-import { DEMAND_SUMBER_LABEL, PLAN_STATUS_LABEL, PLAN_STATUS_TONE, PO_STATUS_LABEL, PO_STATUS_TONE } from '../../lib/labels'
+import { DEMAND_SUMBER_LABEL, PROPORSI_SUMBER_LABEL, PLAN_STATUS_LABEL, PLAN_STATUS_TONE, PO_STATUS_LABEL, PO_STATUS_TONE } from '../../lib/labels'
 import { CreatePoModal } from './CreatePoModal'
 import { sisaSaran, type PlanRow, type PoRow } from './planning'
 
@@ -53,6 +53,7 @@ export default function PengadaanPage() {
         { value: 'saran', label: 'Saran order per SKU' },
         { value: 'po', label: 'Purchase order', count: activePo || undefined },
       ]} />
+      {tab === 'saran' && plan.data && <DemandSummary rows={plan.data} />}
       {tab === 'saran' && <PlanTable plan={plan} onCreate={isAdmin ? setCreating : undefined} />}
       {tab === 'po' && <PoTable pos={pos} />}
       {creating && <CreatePoModal rows={creating} onClose={() => setCreating(null)} />}
@@ -70,6 +71,35 @@ function Stat({ label, value, unit, sub, tone, onClick, loading }: {
       <p className={clsx('mt-0.5 text-2xl font-extrabold num', loading ? 'text-slate-300' : t)}>{loading ? '…' : fmtNum(value)}{unit && <span className="ml-1 text-sm font-semibold">{unit}</span>}</p>
       <p className="line-clamp-2 text-xs text-muted">{loading ? ' ' : sub}</p>
     </button>
+  )
+}
+
+/** Ringkasan perkiraan permintaan rutin, supaya angka yang tidak wajar langsung terlihat. */
+function DemandSummary({ rows }: { rows: PlanRow[] }) {
+  const cfg = useView<{ key: string; value: unknown }>('config', { filters: [['key', 'in', ['planned_hires_per_month', 'demand_min_months']]] })
+  const val = (k: string) => cfg.data?.find((c) => c.key === k)?.value
+  const total = rows.reduce((a, r) => a + Number(r.avg_demand), 0)
+  const rencana = rows.reduce((a, r) => a + Number(r.avg_rencana), 0)
+  const nHist = rows.filter((r) => r.demand_sumber === 'HISTORI').length
+  const nRencana = rows.filter((r) => r.demand_sumber === 'RENCANA_HIRE').length
+  const cukup = rows.some((r) => r.histori_cukup)
+  const rasio = rencana > 0 ? total / rencana : 0
+  const param = <Link to="/master/parameter" className="font-semibold underline">Parameter</Link>
+  return (
+    <div className="space-y-3">
+      <Callout tone="blue" icon={<Info className="size-4" />} title={`Perkiraan permintaan rutin ≈ ${fmtNum(Math.round(total))} pcs/bulan`}>
+        {cukup
+          ? <>{nHist} SKU dari histori (kirim ke karyawan baru/mutasi, tukar, beli), {nRencana} SKU dari rencana hire.</>
+          : <>Histori permintaan rutin belum {String(val('demand_min_months') ?? 3)} bulan, jadi semua SKU memakai rencana hire.</>}
+        {' '}Rencana hire: {String(val('planned_hires_per_month') ?? '…')} karyawan/bulan (ubah di {param}).
+        Riwayat distribusi lama (migrasi) dan kiriman tunggakan tidak dihitung sebagai permintaan rutin — tunggakan masuk kolom Antrian.
+      </Callout>
+      {cukup && rasio > 2 && (
+        <Callout tone="amber" icon={<TriangleAlert className="size-4" />} title={`Histori ${fmtNum(Math.round(rasio * 10) / 10)}× perkiraan rencana hire`}>
+          Permintaan dari histori jauh di atas perkiraan rencana hire ({fmtNum(Math.round(rencana))} pcs/bulan). Periksa transaksi tukar/beli yang tidak biasa, atau sesuaikan rencana hire di {param}, sebelum membuat PO.
+        </Callout>
+      )}
+    </div>
   )
 }
 
@@ -107,8 +137,18 @@ function PlanTable({ plan, onCreate }: { plan: ReturnType<typeof useView<PlanRow
         cell: ({ row: { original: s } }) => <div>{s.on_order ? fmtNum(s.on_order) : <span className="text-slate-300">0</span>}{s.qty_po_draft > 0 && <p className="text-[11px] font-semibold text-amber-700">+{s.qty_po_draft} di PO draft</p>}</div> },
       { accessorKey: 'pipeline_demand', header: () => <Term tip="Hak karyawan aktif & joiner (termasuk cabang baru) yang belum masuk batch. Kebutuhan yang sudah pasti.">Antrian</Term>, meta: { align: 'right', exportHeader: 'Kebutuhan antrian' },
         cell: (c) => (c.getValue() as number) ? fmtNum(c.getValue() as number) : <span className="text-slate-300">0</span> },
-      { accessorKey: 'avg_demand', header: () => <Term tip="Rata-rata keluar per bulan (kirim ke karyawan + pembelian + tukar). SKU tanpa histori memakai perkiraan: rencana hire × qty per karyawan × size curve.">Rata-rata/bln</Term>, meta: { align: 'right', exportHeader: 'Rata-rata per bulan' },
-        cell: ({ row: { original: s } }) => <div title={DEMAND_SUMBER_LABEL[s.demand_sumber]}>{num(s.avg_demand)}{s.demand_sumber === 'SIZE_CURVE' && <p className="text-[11px] text-muted">perkiraan</p>}</div> },
+      { accessorKey: 'avg_demand', header: () => <Term tip="Permintaan rutin per bulan: kirim ke karyawan baru/mutasi jabatan, tukar, dan beli. Riwayat migrasi dan kiriman tunggakan ke karyawan lama tidak dihitung. Bila histori belum cukup: rencana hire × isi paket × sebaran ukuran.">Rata-rata/bln</Term>, meta: { align: 'right', exportHeader: 'Rata-rata per bulan' },
+        cell: ({ row: { original: s } }) => <div title={DEMAND_SUMBER_LABEL[s.demand_sumber]}>{num(s.avg_demand)}{s.demand_sumber === 'RENCANA_HIRE' && <p className="text-[11px] text-muted">perkiraan</p>}</div> },
+      detail && { accessorKey: 'demand_sumber', header: 'Sumber', meta: { exportHeader: 'Sumber perkiraan', exportValue: (s) => DEMAND_SUMBER_LABEL[s.demand_sumber] },
+        cell: ({ row: { original: s } }) => (
+          <div className="min-w-36 text-xs">
+            <p className="font-semibold">{s.demand_sumber === 'HISTORI' ? `Histori ${fmtNum(s.demand_histori)} pcs / ${s.demand_bulan} bln` : s.demand_sumber === 'RENCANA_HIRE' ? 'Rencana hire' : '—'}</p>
+            <p className="text-muted">
+              {[s.demand_sumber === 'HISTORI' && `pembanding rencana hire ${num(s.avg_rencana)}/bln`,
+                s.proporsi_sumber && PROPORSI_SUMBER_LABEL[s.proporsi_sumber]].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+        ) },
       detail && { accessorKey: 'safety_stock', header: () => <Term tip="Safety stock = rata-rata/bln × parameter safety stock (bulan).">SS</Term>, meta: { align: 'right', exportHeader: 'Safety stock' }, cell: (c) => num(c.getValue() as number) },
       detail && { accessorKey: 'rop', header: () => <Term tip="Titik pesan ulang = rata-rata/bln × lead time/30 + safety stock.">ROP</Term>, meta: { align: 'right', exportHeader: 'ROP' }, cell: (c) => num(c.getValue() as number) },
       detail && { accessorKey: 'lead_time_days', header: 'Lead time', meta: { align: 'right', exportHeader: 'Lead time (hari)' }, cell: (c) => `${c.getValue()} hr` },

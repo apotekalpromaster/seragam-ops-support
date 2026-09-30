@@ -88,7 +88,10 @@ export const PENYERAHAN_LABEL: Record<string, string> = {
 export const PLAN_STATUS_LABEL: Record<string, string> = { KRITIS: 'Kritis', ORDER: 'Perlu order', AMAN: 'Aman' }
 export const PLAN_STATUS_TONE: Record<string, 'red' | 'amber' | 'green'> = { KRITIS: 'red', ORDER: 'amber', AMAN: 'green' }
 export const DEMAND_SUMBER_LABEL: Record<string, string> = {
-  HISTORI: 'Dari histori keluar', SIZE_CURVE: 'Perkiraan (rencana hire × size curve)', TIDAK_ADA: 'Belum ada permintaan',
+  HISTORI: 'Dari histori permintaan rutin', RENCANA_HIRE: 'Perkiraan: rencana hire × isi paket × sebaran ukuran', TIDAK_ADA: 'Belum ada permintaan',
+}
+export const PROPORSI_SUMBER_LABEL: Record<string, string> = {
+  DATA_KARYAWAN: 'sebaran ukuran karyawan', SIZE_CURVE: 'size curve',
 }
 export const PO_STATUS_LABEL: Record<string, string> = {
   DRAFT: 'Draft', SENT: 'Dikirim ke vendor', PARTIAL: 'Diterima sebagian', RECEIVED: 'Diterima lengkap', CANCELLED: 'Dibatalkan',

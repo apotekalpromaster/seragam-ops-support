@@ -5,6 +5,7 @@ export interface PlanRow {
   vendor_id: number | null; vendor_nama: string | null; lead_time_days: number; moq: number; on_order: number; qty_po_draft: number
   pipeline_demand: number; demand_histori: number; demand_bulan: number; demand_sumber: string
   avg_demand: number; safety_stock: number; rop: number; kebutuhan_order: number; suggested_order: number; status: string
+  avg_rencana: number; proporsi_sumber: 'DATA_KARYAWAN' | 'SIZE_CURVE' | null; histori_cukup: boolean
 }
 export interface PoRow {
   id: number; kode: string; vendor_id: number; vendor_nama: string; vendor_kontak: string | null; tanggal: string; eta: string | null; fase: string

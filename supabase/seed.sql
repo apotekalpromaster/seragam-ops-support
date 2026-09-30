@@ -14,10 +14,12 @@ insert into seragam.config (key, value, type, label, description, grup, sort_ord
   ('return_alert_days', '14', 'int', 'Alert retur resign (hari)', 'Karyawan resign yang belum mengembalikan lebih dari sekian hari muncul di alert.', 'Transaksi', 20),
   ('allow_reissue_grade_a', 'false', 'bool', 'Retur grade A boleh untuk joiner baru', 'Tidak = stok LAYAK hasil retur hanya dipakai untuk tukar cacat/darurat.', 'Transaksi', 30),
   ('replacement_cycle_months', '0', 'int', 'Siklus penggantian (bulan)', '0 = nonaktif. Rusak = beli.', 'Transaksi', 40),
-  ('demand_window_months', '6', 'int', 'Jendela rata-rata permintaan (bulan)', 'Rentang histori untuk menghitung rata-rata permintaan bulanan per SKU.', 'Perencanaan stok', 10),
+  ('demand_window_months', '6', 'int', 'Jendela rata-rata permintaan (bulan)', 'Rentang histori permintaan rutin (kirim ke karyawan baru/mutasi, tukar, beli) untuk rata-rata bulanan per SKU.', 'Perencanaan stok', 10),
+  ('demand_min_months', '3', 'int', 'Histori minimal (bulan)', 'Rata-rata dari histori baru dipakai bila transaksi keluar rutin pertama sudah sekian bulan lalu. Sebelum itu memakai rencana hire.', 'Perencanaan stok', 15),
+  ('new_hire_days', '60', 'int', 'Batas karyawan baru (hari)', 'Kiriman dihitung sebagai permintaan rutin bila dikirim paling lambat sekian hari setelah join atau setelah mutasi jabatan. Kiriman tunggakan ke karyawan lama tidak dihitung.', 'Perencanaan stok', 16),
   ('ss_months', '0.5', 'number', 'Safety stock (bulan)', 'Safety stock = rata-rata permintaan × nilai ini.', 'Perencanaan stok', 20),
   ('cover_months', '2', 'number', 'Cakupan order (bulan)', 'Saran order menutup kebutuhan sekian bulan ke depan.', 'Perencanaan stok', 30),
-  ('planned_hires_per_month', '50', 'int', 'Rencana hire per bulan', 'Dipakai untuk forecast SKU yang belum punya histori.', 'Perencanaan stok', 40),
+  ('planned_hires_per_month', '50', 'int', 'Rencana hire per bulan', 'Dipakai untuk perkiraan permintaan bila histori belum cukup, dan sebagai pembanding di halaman Pengadaan.', 'Perencanaan stok', 40),
   ('employee_estimate', '800', 'int', 'Estimasi karyawan aktif', 'Referensi perencanaan.', 'Perencanaan stok', 50)
 on conflict (key) do nothing;
 

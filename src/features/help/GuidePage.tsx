@@ -90,14 +90,16 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
           <li>Vendor tidak sanggup mengirim sisa? <b>Tutup PO</b> dengan alasan, supaya sisa tidak lagi dianggap akan datang.</li>
         </ol>
         <div className="rounded-xl bg-slate-50 p-3 font-mono text-xs leading-6 text-slate-700">
-          Rata-rata/bln = keluar (kirim + beli + tukar) dalam jendela histori ÷ jumlah bulan<br />
+          Rata-rata/bln = permintaan rutin (kirim ke karyawan baru/mutasi + beli + tukar) dalam jendela histori ÷ jumlah bulan<br />
           Safety stock (SS) = rata-rata × parameter SS (bulan)<br />
           ROP = rata-rata × lead time/30 + SS<br />
           Saran order = rata-rata × cakupan order + SS + kebutuhan antrian − available − dalam pemesanan, dibulatkan ke pcs terdekat, lalu ke atas ke kelipatan MOQ
         </div>
         <ul className="list-disc space-y-1.5 pl-5">
           <li><b>Kritis</b>: available kurang dari kebutuhan antrian, atau ≤ SS. <b>Perlu order</b>: available + dalam pemesanan ≤ ROP. Selain itu <b>Aman</b>. SS/ROP di bawah ½ pcs diabaikan supaya ukuran yang sangat jarang dipakai tidak selalu merah.</li>
-          <li>SKU tanpa histori memakai perkiraan: rencana hire/bulan × rata-rata qty item per karyawan × size curve (bertanda "perkiraan").</li>
+          <li><b>Permintaan rutin</b> hanya kiriman ke karyawan baru (join sejak sistem dipakai, atau dikirim dalam <i>Batas karyawan baru</i> di Parameter, default 60 hari setelah join) atau karena mutasi jabatan, ditambah tukar dan beli. Riwayat distribusi lama (migrasi) dan kiriman tunggakan ke karyawan lama <b>tidak</b> dihitung — tunggakan sudah masuk kolom Antrian.</li>
+          <li>Selama histori permintaan rutin belum mencapai <i>Histori minimal</i> (Parameter, default 3 bulan), atau SKU belum punya histori, dipakai perkiraan: rencana hire/bulan × rata-rata qty item per karyawan × sebaran ukuran (dari ukuran karyawan bila ≥ 20 orang, selain itu size curve). Bertanda "perkiraan".</li>
+          <li>Kotak <b>Perkiraan permintaan rutin</b> di atas tabel menjumlahkan semuanya; bila histori jauh di atas rencana hire, muncul peringatan untuk diperiksa sebelum membuat PO.</li>
           <li>Kebutuhan cabang baru ikut terhitung setelah karyawannya masuk data PPM (sebagai joiner).</li>
           <li>Parameter (SS, cakupan order, jendela histori, rencana hire, lead time default) diatur admin di Parameter; lead time & MOQ per SKU di Harga & Vendor.</li>
         </ul>

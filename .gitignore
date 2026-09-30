@@ -31,3 +31,6 @@ dist-ssr
 
 # Konfigurasi lokal editor/agent
 .claude/
+
+# Cache Supabase CLI (berisi project ref lokal)
+supabase/.temp/

@@ -16,7 +16,10 @@
 Salah catat penerimaan → admin membuat **Koreksi** di Stok → Riwayat transaksi; sisa PO otomatis kembali.
 
 **Rumus (PRD §6):**
-- Rata-rata/bln = barang keluar (kirim ke karyawan + pembelian + tukar) dalam jendela histori ÷ jumlah bulan. SKU tanpa histori: rencana hire/bulan × rata-rata qty item per karyawan × size curve.
+- Rata-rata/bln = **permintaan rutin** dalam jendela histori ÷ jumlah bulan. Permintaan rutin = kirim ke karyawan baru (join sejak sistem dipakai / import PPM pertama, atau dikirim ≤ `new_hire_days` — default 60 hari — setelah join; paket yang dikirim sebelum join ikut dihitung) atau karena mutasi jabatan (≤ 60 hari setelah import PPM yang mencatat mutasi) + pembelian + tukar, dikurangi koreksinya.
+- **Tidak** dihitung: riwayat distribusi lama dari Migrasi Data Awal, dan kiriman tunggakan ke karyawan lama / pengiriman ulang karena paket berubah. Tunggakan sudah masuk *kebutuhan antrian*; bila ikut dihitung sebagai rata-rata, saran order menjadi berlipat.
+- Histori baru dipakai bila permintaan rutin pertama sudah ≥ `demand_min_months` (default 3) bulan lalu. Sebelum itu, dan untuk SKU tanpa histori: rencana hire/bulan × rata-rata qty item per karyawan × sebaran ukuran (dari ukuran karyawan sungguhan bila ≥ 20 orang untuk item × gender itu, selain itu size curve).
+- Kotak *Perkiraan permintaan rutin* di halaman Pengadaan menjumlahkan rata-rata semua SKU dan memberi peringatan bila histori > 2× perkiraan rencana hire.
 - Safety stock = rata-rata × parameter SS (bulan) · ROP = rata-rata × lead time/30 + SS.
 - Saran order = rata-rata × cakupan order + SS + kebutuhan antrian − available − dalam pemesanan → dibulatkan ke pcs terdekat, lalu ke atas ke kelipatan MOQ.
 - Kritis: available < kebutuhan antrian, atau available ≤ SS. Perlu order: available + dalam pemesanan ≤ ROP. SS/ROP di bawah ½ pcs diabaikan.
